@@ -36,3 +36,8 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+.vscode
+server/dist
+public/dist
+package-lock.json
+generated
