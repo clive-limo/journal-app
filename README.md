@@ -3,18 +3,12 @@
 ### Install Dependencies
 
 ```
-npm i
+npm install
 ```
 
 ### Prisma DB
 
-Copy the .env samples to get started:
-
-```
-cp apps/api/.env.sample apps/api/.env
-cp packages/database/.env.sample packages/database/.env
-```
-Connect to Postgres and run: 
+Connect to PostgreSQL and run: 
 
 ```
 npm run prisma:migrate
