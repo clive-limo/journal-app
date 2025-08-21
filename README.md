@@ -6,7 +6,7 @@
 npm install
 ```
 
-### Prisma DB
+### PostreSQL DB
 
 Connect to PostgreSQL and run: 
 
