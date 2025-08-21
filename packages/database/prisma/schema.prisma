@@ -1,7 +1,5 @@
-
 generator client {
   provider = "prisma-client-js"
-
 }
 
 datasource db {
@@ -9,17 +7,178 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User  {
-  id                  Int       @id @default(autoincrement())
-  email               String    @unique
-  firstName           String    @map("first_name")
-  lastName            String    @map("last_name")
-  googleId            String?   @unique @map("google_id")
-  profileImage        String?   @map("profile_image")
-  authProvider        String?   @default("local") @map("auth_provider")
-  isActive            Boolean   @default(true) @map("is_active")
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime? @updatedAt @map("updated_at")
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique              
+  firstName       String    @map("firstname")
+  lastName        String?   @map("lastname")
+  fullName        String?    @map("fullname")
+  journalingSince DateTime? @map("journalingsince")
+  googleId        String?   @unique @map("googleid")
+  profileImage    String?   @map("profileimage")
+  authProvider    String?   @default("local") @map("authprovider")
+  refreshToken        String?   @map("refresh_token")
+  refreshTokenExpiry  DateTime? @map("refresh_token_expiry")
+  refreshTokenHash    String?   @map("refresh_token_hash")
+  isActive        Boolean   @default(true) @map("isactive")
+  createdAt       DateTime  @default(now()) @map("createdat")
+  updatedAt       DateTime? @updatedAt @map("updatedat")
+  deletedAt DateTime? @map("deleted_at")
+
+  journals    Journal[]
+  moodPoints  MoodPoint[]
+  streak      Streak?
+  preferences UserPreferences?
 
   @@map("users")
+}
+
+model Journal {
+  id        String   @id @default(cuid())
+  title     String?
+  ownerId   String   @map("ownerid")
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("createdat")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  entries Entry[]
+
+  @@index([ownerId])
+
+  @@map("journals")
+}
+
+model Entry {
+  id        String    @id @default(cuid())
+  journalId String    @map("journal_id")
+  journal   Journal   @relation(fields: [journalId], references: [id], onDelete: Cascade)
+
+  kind      EntryKind
+  title     String?
+  body      String?   @db.Text
+  rating    Int?      @db.SmallInt
+  moodLabel String?   @map("mood_label")
+  snippet   String?   @db.VarChar(255)
+
+  media Media[]
+  tags  Tag[]   @relation("EntryTags")
+
+  createdAt DateTime  @default(now()) @map("createdat")
+  updatedAt DateTime  @updatedAt @map("updatedat")
+  deletedAt DateTime? @map("deleted_at")
+
+  entryDate DateTime @default(now()) @map("entrydate")
+  wordCount Int?     @default(0) @map("wordcount")
+  isDraft   Boolean  @default(false) @map("is_draft")
+
+  @@index([journalId, deletedAt, entryDate(sort: Desc)])
+
+  @@map("entries")
+}
+
+model Media {
+  id        String    @id @default(cuid())
+  entryId   String    @map("entry_id")
+  entry     Entry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  kind      MediaKind
+  url       String
+  thumbUrl  String?   @map("thumburl")
+  durationS Int?      @map("durationseconds")
+  width     Int?
+  height    Int?
+
+  fileName String? @map("filename")
+  fileSize Int?    @map("filesize")
+  mimeType String? @map("mime_type")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@index([entryId])
+
+  @@map("media")
+}
+
+model Tag {
+  id    String  @id @default(cuid()) 
+  name  String  @unique             
+  color String? @default("#6B7280")
+
+  entries Entry[] @relation("EntryTags")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@map("tags")
+}
+
+model MoodPoint {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day       DateTime @db.Date
+  score     Int      @db.SmallInt
+
+  color   String?
+  emotion String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@unique([userId, day])
+
+  @@map("mood_points")
+}
+
+model Streak {
+  id            String    @id @default(cuid())
+  userId        String    @unique @map("userid")
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentStreak Int       @default(0) @map("currentstreak")
+  longestStreak Int       @default(0) @map("longeststreak")
+  lastEntryDate DateTime? @map("lastentrydate")
+  totalEntries  Int       @default(0) @map("totalentries")
+
+  monthlyGoal  Int     @default(10) @map("monthlygoal")
+  monthlyCount Int     @default(0) @map("monthlycount")
+  currentMonth String? @map("current_month")
+
+  createdAt DateTime @default(now()) @map("createdat")
+  updatedAt DateTime @updatedAt @map("updatedat")
+
+  @@map("streaks")
+}
+
+model UserPreferences {
+  id               String    @id @default(cuid())
+  userId           String    @unique @map("user_id")
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  reminderEnabled  Boolean @default(false) @map("reminderenabled")
+  reminderTime     String? @map("remindertime")
+  theme            String  @default("light")
+  language         String  @default("en")
+  timezone         String  @default("UTC")
+
+  defaultEntryKind EntryKind @default(WRITE) @map("defaultentrykind")
+  autoSave         Boolean   @default(true) @map("auto_save")
+
+  createdAt DateTime @default(now()) @map("createdat")
+  updatedAt DateTime @updatedAt @map("updatedat")
+
+  @@map("user_preferences")
+}
+
+enum EntryKind {
+  WRITE
+  TALK
+  DRAW
+}
+
+enum MediaKind {
+  AUDIO
+  IMAGE
+  VIDEO
 }
