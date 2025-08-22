@@ -25,6 +25,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CreateJournalDto } from './dto/create-journal.dto';
 import { UpdateJournalDto } from './dto/update-journal.dto';
 import { CreateEntryDto } from './dto/create-entry.dto';
+import { AttachUploadedMediaDto } from './dto/attach-uploaded-media.dto';
 
 @ApiTags('Journals')
 @ApiBearerAuth()
@@ -112,5 +113,38 @@ export class JournalsController {
       limit: limit ? parseInt(limit, 10) : undefined,
       offset: offset ? parseInt(offset, 10) : undefined,
     });
+  }
+
+  // Media routes under Journals
+  @Post(':journalId/entries/:entryId/media/attach')
+  @ApiOperation({
+    summary: 'Attach an uploaded S3 object as media to an entry',
+  })
+  @ApiParam({ name: 'journalId', type: String })
+  @ApiParam({ name: 'entryId', type: String })
+  @ApiBody({ type: AttachUploadedMediaDto })
+  attachUploadedMedia(
+    @CurrentUser() user: any,
+    @Param('entryId') entryId: string,
+    @Body() dto: AttachUploadedMediaDto,
+  ) {
+    return this.journalsService.attachUploadedMedia(user.id, entryId, dto);
+  }
+
+  @Get(':journalId/entries/:entryId/media')
+  @ApiOperation({ summary: 'List media for an entry' })
+  @ApiParam({ name: 'journalId', type: String })
+  @ApiParam({ name: 'entryId', type: String })
+  listEntryMedia(@CurrentUser() user: any, @Param('entryId') entryId: string) {
+    return this.journalsService.listEntryMedia(user.id, entryId);
+  }
+
+  @Delete(':journalId/entries/:entryId/media/:mediaId')
+  @ApiOperation({ summary: 'Soft delete a media item' })
+  @ApiParam({ name: 'journalId', type: String })
+  @ApiParam({ name: 'entryId', type: String })
+  @ApiParam({ name: 'mediaId', type: String })
+  deleteMedia(@CurrentUser() user: any, @Param('mediaId') mediaId: string) {
+    return this.journalsService.deleteMedia(user.id, mediaId);
   }
 }
