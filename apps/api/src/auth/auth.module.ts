@@ -7,15 +7,17 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { TokenService } from './services/token';
 import { GoogleStrategy } from './strategies/google.strategy';
+import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
+    ConfigModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_KEY'),
+        secret: config.get<string>('JWT_SECRET'),
         signOptions: {
           expiresIn: '1h',
         },
@@ -23,7 +25,13 @@ import { GoogleStrategy } from './strategies/google.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, TokenService, JwtAuthGuard, GoogleStrategy],
+  providers: [
+    AuthService,
+    TokenService,
+    JwtAuthGuard,
+    GoogleStrategy,
+    JwtStrategy,
+  ],
   exports: [AuthService, JwtAuthGuard],
 })
 export class AuthModule {}

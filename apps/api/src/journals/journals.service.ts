@@ -8,10 +8,18 @@ import { CreateJournalDto } from './dto/create-journal.dto';
 import { UpdateJournalDto } from './dto/update-journal.dto';
 import { CreateEntryDto } from './dto/create-entry.dto';
 import { UpdateEntryDto } from './dto/update-entry.dto';
+import { AttachUploadedMediaDto } from './dto/attach-uploaded-media.dto';
+import { MediaKind } from '@prisma/client';
+import { MediaService } from '../media/media.service';
+import { isoDateOnly } from '../common/util/time.util';
+import { MoodPointsService } from '../moodpoints/moodpoints.service';
 
 @Injectable()
 export class JournalsService {
-  constructor() {}
+  constructor(
+    private readonly moodPoints: MoodPointsService,
+    private readonly mediaStorage: MediaService,
+  ) {}
 
   // Helper methods
   private async ensureJournalOwnership(userId: string, journalId: string) {
@@ -197,8 +205,8 @@ export class JournalsService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return prisma.$transaction(async (tx) => {
-      const entry = await tx.entry.create({
+    const entry = await prisma.$transaction(async (tx) => {
+      const created = await tx.entry.create({
         data: {
           journalId,
           kind: dto.kind as any,
@@ -258,10 +266,19 @@ export class JournalsService {
         });
       }
 
-      await this.updateUserStreak(userId);
-      
-      return entry;
+      return created;
     });
+
+    await this.updateUserStreak(userId);
+
+    // Mood points: recompute daily average if a rating was provided
+    if (dto.rating != null) {
+      const timezone = await this.moodPoints.getUserTimezone(userId);
+      const dayIso = isoDateOnly(today, timezone);
+      setImmediate(() => this.moodPoints.recomputeFromEntries(userId, dayIso));
+    }
+
+    return entry;
   }
 
   async getEntries(
@@ -332,7 +349,7 @@ export class JournalsService {
 
     const { tags, ...rest } = dto;
 
-    return prisma.entry.update({
+    const updated = await prisma.entry.update({
       where: { id: entryId },
       data: {
         ...rest,
@@ -350,6 +367,16 @@ export class JournalsService {
         media: true,
       },
     });
+
+    // Mood points: recompute if rating changed
+    if (dto.rating !== undefined) {
+      const entry = await this.getEntry(userId, entryId);
+      const timezone = await this.moodPoints.getUserTimezone(userId);
+      const dayIso = isoDateOnly(entry.entryDate, timezone);
+      setImmediate(() => this.moodPoints.recomputeFromEntries(userId, dayIso));
+    }
+
+    return updated;
   }
 
   async deleteEntry(userId: string, entryId: string) {
@@ -357,6 +384,64 @@ export class JournalsService {
 
     return prisma.entry.update({
       where: { id: entryId },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  // Media entries
+  async attachUploadedMedia(
+    userId: string,
+    entryId: string,
+    dto: AttachUploadedMediaDto,
+  ) {
+    await this.ensureEntryOwnership(userId, entryId);
+
+    const meta = await this.mediaStorage.resolveUploadedObject(userId, dto.key);
+    const kind: MediaKind = meta.contentType?.startsWith('image/')
+      ? MediaKind.IMAGE
+      : MediaKind.AUDIO;
+
+    const url = meta.url;
+    const thumbUrl = dto.thumbKey
+      ? this.mediaStorage.publicUrl(dto.thumbKey)
+      : null;
+
+    return prisma.media.create({
+      data: {
+        entryId,
+        kind,
+        url,
+        thumbUrl,
+        durationS: dto.durationS ?? null,
+        width: dto.width ?? null,
+        height: dto.height ?? null,
+        fileName: dto.key.split('/').pop() || null,
+        fileSize: meta.size,
+        mimeType: meta.contentType,
+      },
+    });
+  }
+
+  async listEntryMedia(userId: string, entryId: string) {
+    await this.ensureEntryOwnership(userId, entryId);
+    return prisma.media.findMany({
+      where: { entryId, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async deleteMedia(userId: string, mediaId: string) {
+    const media = await prisma.media.findFirst({
+      where: {
+        id: mediaId,
+        deletedAt: null,
+        entry: { journal: { ownerId: userId } },
+      },
+      select: { id: true },
+    });
+    if (!media) throw new NotFoundException('Media not found');
+    return prisma.media.update({
+      where: { id: mediaId },
       data: { deletedAt: new Date() },
     });
   }
