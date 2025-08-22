@@ -8,10 +8,12 @@ import { CreateJournalDto } from './dto/create-journal.dto';
 import { UpdateJournalDto } from './dto/update-journal.dto';
 import { CreateEntryDto } from './dto/create-entry.dto';
 import { UpdateEntryDto } from './dto/update-entry.dto';
+import { isoDateOnly } from '../common/util/time.util';
+import { MoodPointsService } from '../moodpoints/moodpoints.service';
 
 @Injectable()
 export class JournalsService {
-  constructor() {}
+  constructor(private readonly moodPoints: MoodPointsService) {}
 
   // Helper methods
   private async ensureJournalOwnership(userId: string, journalId: string) {
@@ -197,8 +199,8 @@ export class JournalsService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return prisma.$transaction(async (tx) => {
-      const entry = await tx.entry.create({
+    const entry = await prisma.$transaction(async (tx) => {
+      const created = await tx.entry.create({
         data: {
           journalId,
           kind: dto.kind as any,
@@ -258,10 +260,19 @@ export class JournalsService {
         });
       }
 
-      await this.updateUserStreak(userId);
-      
-      return entry;
+      return created;
     });
+
+    await this.updateUserStreak(userId);
+
+    // Mood points: recompute daily average if a rating was provided
+    if (dto.rating != null) {
+      const timezone = await this.moodPoints.getUserTimezone(userId);
+      const dayIso = isoDateOnly(today, timezone);
+      setImmediate(() => this.moodPoints.recomputeFromEntries(userId, dayIso));
+    }
+
+    return entry;
   }
 
   async getEntries(
@@ -332,7 +343,7 @@ export class JournalsService {
 
     const { tags, ...rest } = dto;
 
-    return prisma.entry.update({
+    const updated = await prisma.entry.update({
       where: { id: entryId },
       data: {
         ...rest,
@@ -350,6 +361,16 @@ export class JournalsService {
         media: true,
       },
     });
+
+    // Mood points: recompute if rating changed
+    if (dto.rating !== undefined) {
+      const entry = await this.getEntry(userId, entryId);
+      const timezone = await this.moodPoints.getUserTimezone(userId);
+      const dayIso = isoDateOnly(entry.entryDate, timezone);
+      setImmediate(() => this.moodPoints.recomputeFromEntries(userId, dayIso));
+    }
+
+    return updated;
   }
 
   async deleteEntry(userId: string, entryId: string) {
