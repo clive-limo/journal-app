@@ -12,7 +12,7 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   constructor(private tokenService: TokenService) {}
 
-  async getUserById(id: string) {
+  async getUserById(id: string, includeJournal = false) {
     if (!id) {
       throw new BadRequestException('User ID is required');
     }
@@ -29,11 +29,30 @@ export class AuthService {
           profileImage: true,
           authProvider: true,
           googleId: true,
+          journals: includeJournal
+            ? {
+                take: 1,
+                orderBy: { createdAt: 'asc' },
+                include: {
+                  _count: {
+                    select: { entries: true },
+                  },
+                },
+              }
+            : false,
         },
       });
 
       if (!user) {
         throw new NotFoundException(`User with ID ${id} not found`);
+      }
+
+      if (includeJournal) {
+        const { journals, ...userData } = user;
+        return {
+          ...userData,
+          defaultJournal: journals?.[0] || null,
+        };
       }
 
       return user;
@@ -75,6 +94,16 @@ export class AuthService {
           updatedAt: new Date(),
         },
       });
+
+      const hasJournal = await prisma.journal.findFirst({
+        where: { ownerId: user.id },
+      });
+
+      if (!hasJournal) {
+        this.logger.log(`User ${user.id} has no journal, creating default...`);
+        await this.createDefaultJournal(user.id, user.firstName || undefined);
+      }
+
       return user;
     }
 
@@ -98,24 +127,63 @@ export class AuthService {
           updatedAt: new Date(),
         },
       });
+
+      const hasJournal = await prisma.journal.findFirst({
+        where: { ownerId: updatedUser.id },
+      });
+
+      if (!hasJournal) {
+        this.logger.log(
+          `User ${updatedUser.id} has no journal, creating default...`,
+        );
+        await this.createDefaultJournal(
+          updatedUser.id,
+          updatedUser.firstName || undefined,
+        );
+      }
+
       return updatedUser;
     }
 
-    this.logger.log(`Creating new user: ${googleUser.email}`);
-    const newUser = await prisma.user.create({
-      data: {
-        email: googleUser.email,
-        firstName: googleUser.firstName,
-        lastName: googleUser.lastName,
-        fullName: `${googleUser.firstName} ${googleUser.lastName}`.trim(),
-        googleId: googleUser.googleId,
-        profileImage: googleUser.profileImage,
-        authProvider: 'google',
-      },
+    const result = await prisma.$transaction(async (tx) => {
+      const newUser = await tx.user.create({
+        data: {
+          email: googleUser.email,
+          firstName: googleUser.firstName,
+          lastName: googleUser.lastName,
+          fullName: `${googleUser.firstName} ${googleUser.lastName}`.trim(),
+          googleId: googleUser.googleId,
+          profileImage: googleUser.profileImage,
+          authProvider: 'google',
+        },
+      });
+
+      const journal = await tx.journal.create({
+        data: {
+          ownerId: newUser.id,
+          title: `${newUser.firstName}'s Journal`,
+        },
+      });
+
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const streak = await tx.streak.create({
+        data: {
+          userId: newUser.id,
+          currentStreak: 0,
+          longestStreak: 0,
+          totalEntries: 0,
+          monthlyCount: 0,
+          currentMonth,
+        },
+      });
+
+      this.logger.log(
+        `New user created with defaults: ${newUser.id}, journal: ${journal.id}`,
+      );
+      return { user: newUser, journal, streak };
     });
 
-    this.logger.log(`New user created: ${newUser.id}`);
-    return newUser;
+    return result.user;
   }
 
   async googleLogin(user: any) {
@@ -124,7 +192,6 @@ export class AuthService {
     }
 
     this.logger.log(`Generating tokens for user: ${user.id}`);
-
     return this.tokenService.generateTokens(user);
   }
 
@@ -134,5 +201,46 @@ export class AuthService {
 
   async generateTokens(user: any) {
     return this.tokenService.generateTokens(user);
+  }
+
+  private async createDefaultJournal(userId: string, userFirstName?: string) {
+    try {
+      const journalTitle = userFirstName
+        ? `${userFirstName}'s Journal`
+        : 'My Journal';
+
+      const journal = await prisma.journal.create({
+        data: {
+          ownerId: userId,
+          title: journalTitle,
+        },
+      });
+
+      const existingStreak = await prisma.streak.findUnique({
+        where: { userId },
+      });
+
+      if (!existingStreak) {
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        await prisma.streak.create({
+          data: {
+            userId,
+            currentStreak: 0,
+            longestStreak: 0,
+            totalEntries: 0,
+            monthlyCount: 0,
+            currentMonth,
+          },
+        });
+      }
+
+      return journal;
+    } catch (error) {
+      this.logger.error(
+        `Failed to create default journal for user ${userId}:`,
+        error,
+      );
+      throw error;
+    }
   }
 }

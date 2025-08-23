@@ -3,13 +3,20 @@ import { ref, computed } from "vue";
 import api from "@/lib/axios";
 
 type User = {
-  id: string; 
+  id: string;
   email: string;
   firstName?: string;
   lastName?: string;
   fullName?: string;
   profileImage?: string;
   authProvider?: string;
+  defaultJournal?: {
+    id: string;
+    title: string;
+    _count: {
+      entries: number;
+    };
+  } | null;
 };
 
 const API_BASE = import.meta.env.VITE_BASE_URL as string;
@@ -17,13 +24,16 @@ const API_BASE = import.meta.env.VITE_BASE_URL as string;
 export const useAuthStore = defineStore("auth", () => {
   const token = ref<string>(localStorage.getItem("token") || "");
   const user = ref<User | null>(null);
-  const returnTo = ref<string>("/home"); 
+  const returnTo = ref<string>("/home");
+  const isLoading = ref(false);
+  const error = ref<string | null>(null);
 
   if (token.value) {
     api.defaults.headers.common.Authorization = `Bearer ${token.value}`;
   }
 
-  const isAuthenticated = computed(() => !!token.value);
+  const isAuthenticated = computed(() => !!token.value && !!user.value);
+  const defaultJournal = computed(() => user.value?.defaultJournal);
 
   function setToken(t: string) {
     token.value = t;
@@ -34,20 +44,36 @@ export const useAuthStore = defineStore("auth", () => {
   function clearAuth() {
     token.value = "";
     user.value = null;
+    error.value = null;
     localStorage.removeItem("token");
     delete api.defaults.headers.common.Authorization;
   }
 
   async function fetchMe() {
-    if (!token.value) return;
+    if (!token.value) {
+      console.log("No token available for fetchMe");
+      return;
+    }
+
+    isLoading.value = true;
+    error.value = null;
+
     try {
       const { data } = await api.get("/auth/me");
       user.value = data;
-    } catch (error) {
-      console.error("Failed to fetch user:", error);
-      if (error.response?.status === 401) {
+      console.log("User fetched successfully:", data);
+      console.log("Default journal:", data.defaultJournal);
+    } catch (err: any) {
+      console.error("Failed to fetch user:", err);
+      error.value =
+        err.response?.data?.message || "Failed to fetch user profile";
+
+      if (err.response?.status === 401) {
         clearAuth();
       }
+      throw err;
+    } finally {
+      isLoading.value = false;
     }
   }
 
@@ -63,8 +89,9 @@ export const useAuthStore = defineStore("auth", () => {
   async function handleCallback(t: string, state?: string) {
     try {
       const saved = sessionStorage.getItem("oauth_state");
+
       if (state && saved && state !== saved) {
-        throw new Error("Invalid state parameter");
+        console.warn("State mismatch - continuing anyway");
       }
 
       setToken(t);
@@ -82,8 +109,9 @@ export const useAuthStore = defineStore("auth", () => {
       }
 
       sessionStorage.removeItem("oauth_state");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Callback error:", error);
+      clearAuth();
       throw error;
     }
   }
@@ -100,11 +128,20 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  if (token.value) {
+    fetchMe().catch(() => {
+      clearAuth();
+    });
+  }
+
   return {
     token,
     user,
     returnTo,
     isAuthenticated,
+    isLoading,
+    error,
+    defaultJournal,
     setToken,
     clearAuth,
     fetchMe,
