@@ -5,15 +5,36 @@ import UiButton from '@/components/Ui/UiButton.vue';
 import router from '@/router';
 import { cardDetails } from '@/utils/data';
 import { MoveRight, UserRound } from 'lucide-vue-next';
+import { computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { storeToRefs } from 'pinia'
 
 const auth = useAuthStore()
-const { user, isAuthenticated } = storeToRefs(auth)
+const { user, defaultJournal, isLoading } = storeToRefs(auth)
 
 const handleLogin = () => {
   auth.loginWithGoogle()
 };
+
+const createEntry = () => {
+  if (defaultJournal.value) {
+    // Navigate to create entry page with the default journal ID
+    router.push(`/journals/${defaultJournal.value.id}/entries/new`)
+  }
+}
+
+
+const viewEntries = () => {
+  if (defaultJournal.value) {
+    router.push(`/journals/${defaultJournal.value.id}/entries`)
+  }
+}
+
+onMounted(() => {
+  // User data including default journal is already loaded from auth store
+  console.log('User:', user.value)
+  console.log('Default Journal:', defaultJournal.value)
+})
 
 const goToHome = () => {
   router.push({ name: 'Home' })
