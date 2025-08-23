@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Body, HttpCode, Req, Res, HttpStatus, UseGuards, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  HttpCode,
+  Req,
+  Res,
+  HttpStatus,
+  UseGuards,
+  BadRequestException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import type { Request, Response } from 'express';
 import { ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
@@ -6,7 +17,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AuthResponseDto } from './dto/auth-response.dto';
-import { CurrentUser } from '../common/decorators/current-user.decorator'
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -101,19 +112,12 @@ export class AuthController {
   async me(@Req() req: Request) {
     const user = req.user as any;
     const userId = user.id || user.sub;
-    
+
     if (!userId) {
       throw new BadRequestException('User not found in token');
     }
-  
-    return {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      fullName: user.fullName,
-      profileImage: user.profileImage,
-      authProvider: user.authProvider,
-    };
+
+    const userData = await this.authService.getUserById(userId, true);
+    return userData;
   }
 }
