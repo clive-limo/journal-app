@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { prisma } from '@journal/database';
 import { TokenService } from './services/token';
 
@@ -6,6 +11,37 @@ import { TokenService } from './services/token';
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   constructor(private tokenService: TokenService) {}
+
+  async getUserById(id: string) {
+    if (!id) {
+      throw new BadRequestException('User ID is required');
+    }
+
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          fullName: true,
+          profileImage: true,
+          authProvider: true,
+          googleId: true,
+        },
+      });
+
+      if (!user) {
+        throw new NotFoundException(`User with ID ${id} not found`);
+      }
+
+      return user;
+    } catch (error) {
+      this.logger.error(`Error fetching user ${id}:`, error);
+      throw error;
+    }
+  }
 
   async signout(userId: string) {
     try {
@@ -25,13 +61,19 @@ export class AuthService {
     lastName: string;
     profileImage: string;
   }) {
+    this.logger.log(`Validating Google user: ${googleUser.email}`);
+
     let user = await prisma.user.findUnique({
       where: { googleId: googleUser.googleId },
     });
+
     if (user) {
+      this.logger.log(`Found existing user by googleId: ${user.id}`);
       await prisma.user.update({
         where: { id: user.id },
-        data: {},
+        data: {
+          updatedAt: new Date(),
+        },
       });
       return user;
     }
@@ -39,6 +81,9 @@ export class AuthService {
     user = await prisma.user.findUnique({ where: { email: googleUser.email } });
 
     if (user) {
+      this.logger.log(
+        `Found existing user by email, linking Google: ${user.id}`,
+      );
       const updatedUser = await prisma.user.update({
         where: { id: user.id },
         data: {
@@ -50,11 +95,13 @@ export class AuthService {
           fullName:
             user.fullName ||
             `${googleUser.firstName} ${googleUser.lastName}`.trim(),
+          updatedAt: new Date(),
         },
       });
       return updatedUser;
     }
 
+    this.logger.log(`Creating new user: ${googleUser.email}`);
     const newUser = await prisma.user.create({
       data: {
         email: googleUser.email,
@@ -67,10 +114,17 @@ export class AuthService {
       },
     });
 
+    this.logger.log(`New user created: ${newUser.id}`);
     return newUser;
   }
 
   async googleLogin(user: any) {
+    if (!user || !user.id) {
+      throw new BadRequestException('Invalid user data from Google');
+    }
+
+    this.logger.log(`Generating tokens for user: ${user.id}`);
+
     return this.tokenService.generateTokens(user);
   }
 

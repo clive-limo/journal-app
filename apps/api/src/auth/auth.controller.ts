@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, HttpCode, Req, Res, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, HttpCode, Req, Res, HttpStatus, UseGuards, BadRequestException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import type { Request, Response } from 'express';
 import { ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
@@ -47,7 +47,11 @@ export class AuthController {
     description: 'Unauthorized - Invalid or missing token',
   })
   async signout(@CurrentUser() user: any) {
-    await this.authService.signout(user.id);
+    const userId = user.id || user.sub;
+    if (!userId) {
+      throw new BadRequestException('User ID not found');
+    }
+    await this.authService.signout(userId);
     return { message: 'User signed out successfully' };
   }
 
@@ -70,17 +74,46 @@ export class AuthController {
   })
   async googleAuthCallback(@Req() req: Request, @Res() res: Response) {
     const user = req.user as any;
+    const state = (req.query?.state as string) || '';
     try {
       const authResult = await this.authService.googleLogin(user);
-      const frontendUrl = process.env.FRONTEND_URL;
-      const redirectUrl = `${frontendUrl}/auth/callback?token=${authResult.accessToken}`;
-      return res.redirect(redirectUrl); 
+      const frontendUrl = process.env.FRONTEND_URL!;
+      const redirectUrl =
+        `${frontendUrl}/auth/callback?token=${authResult.accessToken}` +
+        (state ? `&state=${encodeURIComponent(state)}` : '');
+      return res.redirect(redirectUrl);
     } catch (error) {
-      const frontendUrl = process.env.FRONTEND_URL;
-      const errorUrl = `${frontendUrl}/auth/error?message=${encodeURIComponent(
-        'Authentication failed',
-      )}`;
-      return res.redirect(errorUrl);
+      console.error('Google auth callback error:', error);
+      const frontendUrl = process.env.FRONTEND_URL!;
+      return res.redirect(
+        `${frontendUrl}/auth/error?message=` +
+          encodeURIComponent('Authentication failed'),
+      );
     }
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user profile (by access token)' })
+  @ApiResponse({ status: 200, description: 'Returns the current user' })
+  @HttpCode(200)
+  async me(@Req() req: Request) {
+    const user = req.user as any;
+    const userId = user.id || user.sub;
+    
+    if (!userId) {
+      throw new BadRequestException('User not found in token');
+    }
+  
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      fullName: user.fullName,
+      profileImage: user.profileImage,
+      authProvider: user.authProvider,
+    };
   }
 }

@@ -5,10 +5,19 @@ import UiButton from '@/components/Ui/UiButton.vue';
 import router from '@/router';
 import { cardDetails } from '@/utils/data';
 import { MoveRight, UserRound } from 'lucide-vue-next';
+import { useAuthStore } from '@/stores/auth'
+import { storeToRefs } from 'pinia'
 
-const handleLogin = async () => {
-  router.push('/home');
+const auth = useAuthStore()
+const { user, isAuthenticated } = storeToRefs(auth)
+
+const handleLogin = () => {
+  auth.loginWithGoogle()
 };
+
+const goToHome = () => {
+  router.push({ name: 'Home' })
+}
 </script>
 
 <template>
