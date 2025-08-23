@@ -14,7 +14,12 @@
     "type-check": "vue-tsc --build"
   },
   "dependencies": {
-    "vue": "^3.5.18"
+    "@tailwindcss/vite": "^4.1.12",
+    "lucide-vue-next": "^0.541.0",
+    "pinia": "^3.0.3",
+    "tailwindcss": "^4.1.12",
+    "vue": "^3.5.18",
+    "vue-router": "^4.5.1"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.2",
