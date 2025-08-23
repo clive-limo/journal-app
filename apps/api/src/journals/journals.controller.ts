@@ -9,33 +9,59 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiOkResponse,
+  ApiCreatedResponse,
+  ApiParam,
+  ApiQuery,
+  ApiBody,
+} from '@nestjs/swagger';
 import { JournalsService } from './journals.service';
-import { CurrentUser, JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CreateJournalDto } from './dto/create-journal.dto';
 import { UpdateJournalDto } from './dto/update-journal.dto';
 import { CreateEntryDto } from './dto/create-entry.dto';
+import { AttachUploadedMediaDto } from './dto/attach-uploaded-media.dto';
 
+@ApiTags('Journals')
+@ApiBearerAuth()
 @Controller('journals')
 @UseGuards(JwtAuthGuard)
 export class JournalsController {
   constructor(private journalsService: JournalsService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create a journal' })
+  @ApiBody({ type: CreateJournalDto })
+  @ApiCreatedResponse({ description: 'Journal created' })
   createJournal(@CurrentUser() user: any, @Body() dto: CreateJournalDto) {
     return this.journalsService.createJournal(user.id, dto);
   }
 
   @Get()
+  @ApiOperation({ summary: 'List my journals' })
+  @ApiOkResponse({ description: 'Array of journals' })
   getJournals(@CurrentUser() user: any) {
     return this.journalsService.getJournals(user.id);
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get a journal by id' })
+  @ApiParam({ name: 'id', type: String })
+  @ApiOkResponse({ description: 'Journal detail' })
   getJournal(@CurrentUser() user: any, @Param('id') id: string) {
     return this.journalsService.getJournal(user.id, id);
   }
 
   @Put(':id')
+  @ApiOperation({ summary: 'Update a journal' })
+  @ApiParam({ name: 'id', type: String })
+  @ApiBody({ type: UpdateJournalDto })
+  @ApiOkResponse({ description: 'Updated journal' })
   updateJournal(
     @CurrentUser() user: any,
     @Param('id') id: string,
@@ -45,11 +71,18 @@ export class JournalsController {
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete a journal' })
+  @ApiParam({ name: 'id', type: String })
+  @ApiOkResponse({ description: 'Deleted journal' })
   deleteJournal(@CurrentUser() user: any, @Param('id') id: string) {
     return this.journalsService.deleteJournal(user.id, id);
   }
 
   @Post(':journalId/entries')
+  @ApiOperation({ summary: 'Create an entry in a journal' })
+  @ApiParam({ name: 'journalId', type: String })
+  @ApiBody({ type: CreateEntryDto })
+  @ApiCreatedResponse({ description: 'Entry created' })
   createEntry(
     @CurrentUser() user: any,
     @Param('journalId') journalId: string,
@@ -59,6 +92,13 @@ export class JournalsController {
   }
 
   @Get(':journalId/entries')
+  @ApiOperation({ summary: 'List entries in a journal' })
+  @ApiParam({ name: 'journalId', type: String })
+  @ApiQuery({ name: 'kind', required: false, enum: ['WRITE', 'TALK', 'DRAW'] })
+  @ApiQuery({ name: 'isDraft', required: false, type: Boolean, example: false })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
+  @ApiQuery({ name: 'offset', required: false, type: Number, example: 0 })
+  @ApiOkResponse({ description: 'Array of entries' })
   getEntries(
     @CurrentUser() user: any,
     @Param('journalId') journalId: string,
@@ -70,8 +110,41 @@ export class JournalsController {
     return this.journalsService.getEntries(user.id, journalId, {
       kind,
       isDraft: isDraft === 'true',
-      limit: limit ? parseInt(limit) : undefined,
-      offset: offset ? parseInt(offset) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined,
     });
+  }
+
+  // Media routes under Journals
+  @Post(':journalId/entries/:entryId/media/attach')
+  @ApiOperation({
+    summary: 'Attach an uploaded S3 object as media to an entry',
+  })
+  @ApiParam({ name: 'journalId', type: String })
+  @ApiParam({ name: 'entryId', type: String })
+  @ApiBody({ type: AttachUploadedMediaDto })
+  attachUploadedMedia(
+    @CurrentUser() user: any,
+    @Param('entryId') entryId: string,
+    @Body() dto: AttachUploadedMediaDto,
+  ) {
+    return this.journalsService.attachUploadedMedia(user.id, entryId, dto);
+  }
+
+  @Get(':journalId/entries/:entryId/media')
+  @ApiOperation({ summary: 'List media for an entry' })
+  @ApiParam({ name: 'journalId', type: String })
+  @ApiParam({ name: 'entryId', type: String })
+  listEntryMedia(@CurrentUser() user: any, @Param('entryId') entryId: string) {
+    return this.journalsService.listEntryMedia(user.id, entryId);
+  }
+
+  @Delete(':journalId/entries/:entryId/media/:mediaId')
+  @ApiOperation({ summary: 'Soft delete a media item' })
+  @ApiParam({ name: 'journalId', type: String })
+  @ApiParam({ name: 'entryId', type: String })
+  @ApiParam({ name: 'mediaId', type: String })
+  deleteMedia(@CurrentUser() user: any, @Param('mediaId') mediaId: string) {
+    return this.journalsService.deleteMedia(user.id, mediaId);
   }
 }

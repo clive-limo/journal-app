@@ -4,8 +4,9 @@ import type { Request, Response } from 'express';
 import { ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
-import { JwtAuthGuard, CurrentUser } from './guards/jwt-auth.guard';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AuthResponseDto } from './dto/auth-response.dto';
+import { CurrentUser } from '../common/decorators/current-user.decorator'
 
 @Controller('auth')
 export class AuthController {

@@ -4,6 +4,8 @@ import { JournalsModule } from './journals/journals.module';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { MoodpointsModule } from './moodpoints/moodpoints.module';
+import { MediaModule } from './media/media.module';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { APP_GUARD } from '@nestjs/core';
     ]),
     AuthModule,
     JournalsModule,
+    MoodpointsModule,
+    MediaModule,
   ],
   controllers: [],
   providers: [
