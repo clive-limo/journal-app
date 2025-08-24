@@ -35,7 +35,7 @@ async function bootstrap() {
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, documentFactory);
 
-  await app.listen(PORT);
+  await app.listen(PORT ? Number(PORT): 5000, '0.0.0.0');
   Logger.log(`Journal API up and running on PORT: ${PORT}`);
 }
 bootstrap();
