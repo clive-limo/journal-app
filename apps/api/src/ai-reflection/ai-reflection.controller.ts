@@ -24,7 +24,7 @@ import { AIServiceException } from './exceptions/ai-service.exceptions';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('ai-reflection')
-// @UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard)
 export class AIReflectionController {
   constructor(private readonly aiReflectionService: AIReflectionService) {}
 
