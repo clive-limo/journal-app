@@ -28,7 +28,7 @@ We are a team of 2 members:
 
 # About our project 
 
-[Journal APP](https://journal-app-1-nzaz.onrender.com/) <br />
+[Journal APP](https://journal-app-web-xi.vercel.app/) <br />
 This app helps you capture your thoughts and learn from them. Write, talk, or draw. Keep your entries in one place. Build a steady habit and see your mood over time.
 
 This project is part of **Co-Creating with GPT-5** Hackathon sponsored by [lablab.ai](https://lablab.ai/) 
@@ -53,7 +53,7 @@ Goal: Analyze an entry and save a normalized result. Guide short reflections and
 
 ## Step 1: Access the app & register
 
-Open the app at **`https://journal-app-1-nzaz.onrender.com`**.
+Open the app at **`https://journal-app-web-xi.vercel.app`**.
 
 You’ll land on your **Get Started** view.
 
