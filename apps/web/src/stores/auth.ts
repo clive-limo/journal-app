@@ -1,6 +1,6 @@
-import { defineStore } from "pinia";
-import { ref, computed } from "vue";
-import api from "@/lib/axios";
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
+import api from '@/lib/axios';
 
 type User = {
   id: string;
@@ -21,10 +21,10 @@ type User = {
 
 const API_BASE = import.meta.env.VITE_BASE_URL as string;
 
-export const useAuthStore = defineStore("auth", () => {
-  const token = ref<string>(localStorage.getItem("token") || "");
+export const useAuthStore = defineStore('auth', () => {
+  const token = ref<string>(localStorage.getItem('token') || '');
   const user = ref<User | null>(null);
-  const returnTo = ref<string>("/home");
+  const returnTo = ref<string>('/home');
   const isLoading = ref(false);
   const error = ref<string | null>(null);
 
@@ -37,21 +37,21 @@ export const useAuthStore = defineStore("auth", () => {
 
   function setToken(t: string) {
     token.value = t;
-    localStorage.setItem("token", t);
+    localStorage.setItem('token', t);
     api.defaults.headers.common.Authorization = `Bearer ${t}`;
   }
 
   function clearAuth() {
-    token.value = "";
+    token.value = '';
     user.value = null;
     error.value = null;
-    localStorage.removeItem("token");
+    localStorage.removeItem('token');
     delete api.defaults.headers.common.Authorization;
   }
 
   async function fetchMe() {
     if (!token.value) {
-      console.log("No token available for fetchMe");
+      console.log('No token available for fetchMe');
       return;
     }
 
@@ -59,14 +59,14 @@ export const useAuthStore = defineStore("auth", () => {
     error.value = null;
 
     try {
-      const { data } = await api.get("/auth/me");
+      const { data } = await api.get('/auth/me');
       user.value = data;
-      console.log("User fetched successfully:", data);
-      console.log("Default journal:", data.defaultJournal);
+      console.log('User fetched successfully:', data);
+      console.log('Default journal:', data.defaultJournal);
     } catch (err: any) {
-      console.error("Failed to fetch user:", err);
+      console.error('Failed to fetch user:', err);
       error.value =
-        err.response?.data?.message || "Failed to fetch user profile";
+        err.response?.data?.message || 'Failed to fetch user profile';
 
       if (err.response?.status === 401) {
         clearAuth();
@@ -80,18 +80,18 @@ export const useAuthStore = defineStore("auth", () => {
   function loginWithGoogle() {
     const url = `${API_BASE}/auth/google`;
     const state = btoa(
-      JSON.stringify({ t: Date.now(), returnTo: returnTo.value })
+      JSON.stringify({ t: Date.now(), returnTo: returnTo.value }),
     );
-    sessionStorage.setItem("oauth_state", state);
+    sessionStorage.setItem('oauth_state', state);
     window.location.href = `${url}?state=${encodeURIComponent(state)}`;
   }
 
   async function handleCallback(t: string, state?: string) {
     try {
-      const saved = sessionStorage.getItem("oauth_state");
+      const saved = sessionStorage.getItem('oauth_state');
 
       if (state && saved && state !== saved) {
-        console.warn("State mismatch - continuing anyway");
+        console.warn('State mismatch - continuing anyway');
       }
 
       setToken(t);
@@ -104,13 +104,13 @@ export const useAuthStore = defineStore("auth", () => {
             returnTo.value = decoded.returnTo;
           }
         } catch (e) {
-          console.error("Failed to parse state:", e);
+          console.error('Failed to parse state:', e);
         }
       }
 
-      sessionStorage.removeItem("oauth_state");
+      sessionStorage.removeItem('oauth_state');
     } catch (error: any) {
-      console.error("Callback error:", error);
+      console.error('Callback error:', error);
       clearAuth();
       throw error;
     }
@@ -119,10 +119,10 @@ export const useAuthStore = defineStore("auth", () => {
   async function signout() {
     try {
       if (token.value) {
-        await api.post("/auth/signout");
+        await api.post('/auth/signout');
       }
     } catch (error) {
-      console.error("Signout error:", error);
+      console.error('Signout error:', error);
     } finally {
       clearAuth();
     }

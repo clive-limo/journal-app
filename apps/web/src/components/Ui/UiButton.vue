@@ -50,9 +50,6 @@ const handleClick = async () => {
   loading.value = true;
   console.log('clicked');
   try {
-    if (props.delay) {
-      await new Promise((resolve) => setTimeout(resolve, props.delay));
-    }
     await props.onClick();
   } finally {
     loading.value = false;

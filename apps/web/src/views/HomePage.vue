@@ -2,6 +2,7 @@
 import JournalEntry from '@/components/Home/JournalEntry.vue';
 import Text from '@/components/Typography/Text.vue';
 import UiButton from '@/components/Ui/UiButton.vue';
+import { useAuthStore } from '@/stores/auth';
 import {
   ArrowLeft,
   BookText,
@@ -13,7 +14,9 @@ import {
   UserRound,
 } from 'lucide-vue-next';
 
-import { ref, nextTick, Transition } from 'vue';
+import { ref, nextTick, Transition, computed } from 'vue';
+
+const authStore = useAuthStore();
 
 const startButtonClicked = ref(false);
 const journalStarted = ref(false);
@@ -21,6 +24,14 @@ const journalType = ref('write');
 const buttonsVisible = ref([false, false, false]);
 
 const showSidebar = ref(false);
+
+const today = computed(() => {
+  const date = new Date();
+  const day = date.toLocaleString('default', { weekday: 'long' });
+  const month = date.toLocaleString('default', { month: 'long' });
+  const dayNumber = date.toLocaleString('default', { day: 'numeric' });
+  return `${day}, ${month} ${dayNumber}`;
+});
 
 const handleStartClick = async () => {
   startButtonClicked.value = true;
@@ -133,9 +144,15 @@ const getButtonAnimation = (index: number) => {
         <div
           class="flex-1 flex flex-col items-center justify-center gap-4 pb-32"
         >
-          <Text variant="subtitle" size="md">WEDNESDAY, AUGUST 17TH</Text>
+          <Text variant="subtitle" size="md">{{ today.toUpperCase() }}</Text>
           <Text variant="title" size="xl" class="text-[56px] font-black">
-            Good Morning, Clive
+            Good Morning,
+            {{
+              authStore.user
+                ? authStore.user.firstName!.charAt(0).toUpperCase() +
+                  authStore.user.firstName!.slice(1)
+                : 'User'
+            }}
           </Text>
 
           <UiButton
@@ -241,7 +258,14 @@ const getButtonAnimation = (index: number) => {
       </div>
 
       <div v-else-if="journalStarted" class="flex-1 flex flex-col p-4">
-        <JournalEntry :entryType="journalType" />
+        <JournalEntry
+          :entryType="journalType"
+          @close-entry="
+            () => {
+              journalStarted = !journalStarted;
+            }
+          "
+        />
       </div>
     </section>
   </main>
