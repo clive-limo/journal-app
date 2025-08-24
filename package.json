@@ -13,7 +13,7 @@
     "migrate:deploy": "npx prisma migrate deploy --schema=packages/database/prisma/schema.prisma",
     "build:api": "npx turbo run build --filter=./apps/api...",
     "start:api": "node apps/api/dist/main.js",
-    "render:build": "npm ci && npm run prisma:generate && npm run build:api",
+    "render:build": "NPM_CONFIG_PRODUCTION=false npm ci && npm run prisma:generate && npm run build:api",
     "build:web": "npx turbo run build --filter=./apps/web..."
   },
   "devDependencies": {
