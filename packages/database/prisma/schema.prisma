@@ -62,6 +62,8 @@ model Entry {
 
   media Media[]
   tags  Tag[]   @relation("EntryTags")
+  analysis AiAnalysis?       
+  reflections ReflectionMessage[] 
 
   createdAt DateTime  @default(now()) @map("createdat")
   updatedAt DateTime  @updatedAt @map("updatedat")
@@ -170,6 +172,39 @@ model UserPreferences {
   @@map("user_preferences")
 }
 
+model AiAnalysis {
+  id         String   @id @default(cuid())
+  entryId    String   @unique @map("entry_id")
+  entry      Entry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  moodPrimary   String
+  moodSecondary String?
+  moodScore     Int
+  color         String
+  themes      Json
+  insights    Json
+  patterns    Json
+  suggestions Json
+  raw Json
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([entryId])
+  @@map("ai_analyses")
+}
+
+model ReflectionMessage {
+  id        String           @id @default(cuid())
+  entryId   String           @map("entry_id")
+  entry     Entry            @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  author    ReflectionAuthor
+  content   String           @db.Text
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  @@index([entryId, createdAt])
+  @@map("reflection_messages")
+}
+
 enum EntryKind {
   WRITE
   TALK
@@ -180,4 +215,9 @@ enum MediaKind {
   AUDIO
   IMAGE
   VIDEO
+}
+
+enum ReflectionAuthor {
+  USER
+  AI
 }
