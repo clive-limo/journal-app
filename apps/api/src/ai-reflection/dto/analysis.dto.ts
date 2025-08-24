@@ -1,7 +1,12 @@
 import { EntryKind } from '@journal/database';
-import { IsString, IsNotEmpty, IsEnum } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsString, IsNotEmpty, IsEnum, ValidateNested, IsOptional } from 'class-validator';
 
 export class CreateAnalysisDto {
+  @IsString()
+  @IsNotEmpty()
+  entryId: string;
+
   @IsString()
   @IsNotEmpty()
   entryContent: string;
@@ -14,11 +19,18 @@ export class CreateAnalysisDto {
 export class CreateReflectionDto {
   @IsString()
   @IsNotEmpty()
+  entryId: string;
+
+  @IsString()
+  @IsNotEmpty()
   userMessage: string;
 
   @IsString()
   entryContent?: string;
 
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => Object)
   conversationContext?: Array<{
     role: string;
     content: string;
@@ -26,6 +38,10 @@ export class CreateReflectionDto {
 }
 
 export class InitializeChatDto {
+  @IsString()
+  @IsNotEmpty()
+  entryId: string;
+
   @IsString()
   @IsNotEmpty()
   entryContent: string;

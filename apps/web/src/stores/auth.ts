@@ -61,10 +61,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const { data } = await api.get('/auth/me');
       user.value = data;
-      console.log('User fetched successfully:', data);
-      console.log('Default journal:', data.defaultJournal);
     } catch (err: any) {
-      console.error('Failed to fetch user:', err);
       error.value =
         err.response?.data?.message || 'Failed to fetch user profile';
 
