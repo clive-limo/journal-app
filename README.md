@@ -106,7 +106,7 @@ Already have an account? Click **LOGIN** in the top right corner and:
 
 # Watch the video Walkthrough
 
-[![App Walkthrough]()]( "App Walkthrough")
+App Walkthrough https://www.loom.com/share/0f81ee1fa7b14727a65d86fff43a217e?sid=cb1b541d-f9ff-4bd0-81c5-c44a2c38ebca
 
 # License
 
