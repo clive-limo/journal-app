@@ -11,14 +11,13 @@
     "prisma:generate": "npx prisma generate --schema=packages/database/prisma/schema.prisma",
     "prisma:seed": " npm --workspace packages/database exec prisma db seed",
     "migrate:deploy": "npx prisma migrate deploy --schema=packages/database/prisma/schema.prisma",
-
     "build:api": "npx turbo run build --filter=./apps/api...",
     "start:api": "node apps/api/dist/main.js",
-
-    "render:build": "npm ci && npm run prisma:generate && npm run build:api",
+    "render:build": "NPM_CONFIG_PRODUCTION=false npm ci && npm run prisma:generate && npm run build:api",
     "build:web": "npx turbo run build --filter=./apps/web..."
   },
   "devDependencies": {
+    "@nestjs/cli": "^11.0.10",
     "@types/node": "^24.3.0",
     "prettier": "^3.6.2",
     "turbo": "^2.5.6",
