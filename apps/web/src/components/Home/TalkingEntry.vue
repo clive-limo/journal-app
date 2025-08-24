@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import UiButton from '@/components/Ui/UiButton.vue';
 import Text from '@/components/Typography/Text.vue';
 import {
@@ -12,6 +12,7 @@ import {
   SquareStop,
   Mic2,
 } from 'lucide-vue-next';
+import { onBeforeUnmount } from 'vue';
 
 const props = defineProps({
   onSave: {
@@ -39,7 +40,7 @@ let audioContext: AudioContext | null = null;
 let analyser: AnalyserNode | null = null;
 let microphone: MediaStreamAudioSourceNode | null = null;
 let animationFrame: number | null = null;
-let recordingTimer: NodeJS.Timeout | null = null;
+let recordingTimer: number | null = null;
 const audioChunks: Blob[] = [];
 
 // Voice wave animation data
@@ -214,6 +215,17 @@ const getRecordingStatus = () => {
   return 'Tap to start recording your entry';
 };
 
+const audioUrl = computed(() => {
+  return audioBlob.value ? URL.createObjectURL(audioBlob.value) : '';
+});
+
+// Clean up the object URL when component unmounts
+onBeforeUnmount(() => {
+  if (audioUrl.value) {
+    URL.revokeObjectURL(audioUrl.value);
+  }
+});
+
 onMounted(() => {
   // Initialize on mount if needed
 });
@@ -311,11 +323,7 @@ onUnmounted(() => {
 
       <!-- Audio Playback and Save (shown after recording) -->
       <div v-if="audioBlob" class="flex flex-col items-center gap-4 w-full">
-        <audio
-          controls
-          :src="URL.createObjectURL(audioBlob)"
-          class="w-full max-w-md"
-        />
+        <audio controls :src="audioUrl" class="w-full max-w-md" />
 
         <div class="flex items-center gap-4">
           <UiButton

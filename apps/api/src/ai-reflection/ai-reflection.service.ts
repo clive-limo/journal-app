@@ -1,16 +1,23 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { prisma } from '@journal/database';
-import { ReflectionAuthor } from '@prisma/client';
+// import { ReflectionAuthor } from '@prisma/client';
 import {
   CreateAnalysisDto,
   CreateReflectionDto,
+  GetDrawingContextDto,
   InitializeChatDto,
 } from './dto/analysis.dto';
 import {
   AIAnalysis,
   ReflectionResponse,
   InitialChatResponse,
+  DrawingContext,
+  ImageAnalysis,
+  AudioTranscription,
+  TextPart,
+  ImageUrlPart,
+  InputAudioPart,
 } from './interfaces/ai-analysis.interface';
 import {
   AIAPIException,
@@ -36,7 +43,7 @@ export class AIReflectionService {
   }
 
   async generateEntryAnalysis(dto: CreateAnalysisDto): Promise<AIAnalysis> {
-    const { entryId, entryContent, entryType } = dto;
+    const { entryContent, entryType } = dto;
 
     try {
       const analysisPrompt = `Analyze this ${entryType} journal entry and provide insights:
@@ -87,32 +94,32 @@ Please provide the analysis ONLY as valid JSON (no code fences, no explanations,
 
       const analysis = this.formatAnalysisResponse(parsed, entryContent);
 
-      await prisma.aiAnalysis.upsert({
-        where: { entryId },
-        create: {
-          entryId,
-          moodPrimary: analysis.mood.primary,
-          moodSecondary: analysis.mood.secondary,
-          moodScore: analysis.mood.score,
-          color: analysis.mood.color,
-          themes: analysis.themes,
-          insights: analysis.insights,
-          patterns: analysis.patterns,
-          suggestions: analysis.suggestions,
-          raw: parsed,
-        },
-        update: {
-          moodPrimary: analysis.mood.primary,
-          moodSecondary: analysis.mood.secondary,
-          moodScore: analysis.mood.score,
-          color: analysis.mood.color,
-          themes: analysis.themes,
-          insights: analysis.insights,
-          patterns: analysis.patterns,
-          suggestions: analysis.suggestions,
-          raw: parsed,
-        },
-      });
+      // await prisma.aiAnalysis.upsert({
+      //   where: { entryId },
+      //   create: {
+      //     entryId,
+      //     moodPrimary: analysis.mood.primary,
+      //     moodSecondary: analysis.mood.secondary,
+      //     moodScore: analysis.mood.score,
+      //     color: analysis.mood.color,
+      //     themes: analysis.themes,
+      //     insights: analysis.insights,
+      //     patterns: analysis.patterns,
+      //     suggestions: analysis.suggestions,
+      //     raw: parsed,
+      //   },
+      //   update: {
+      //     moodPrimary: analysis.mood.primary,
+      //     moodSecondary: analysis.mood.secondary,
+      //     moodScore: analysis.mood.score,
+      //     color: analysis.mood.color,
+      //     themes: analysis.themes,
+      //     insights: analysis.insights,
+      //     patterns: analysis.patterns,
+      //     suggestions: analysis.suggestions,
+      //     raw: parsed,
+      //   },
+      // });
 
       return analysis;
     } catch (error) {
@@ -125,22 +132,16 @@ Please provide the analysis ONLY as valid JSON (no code fences, no explanations,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-
   }
 
   async generateReflectionResponse(
     dto: CreateReflectionDto,
   ): Promise<ReflectionResponse> {
-    const {
-      entryId,
-      userMessage,
-      entryContent,
-      conversationContext = [],
-    } = dto;
+    const { userMessage, entryContent, conversationContext = [] } = dto;
 
-    await prisma.reflectionMessage.create({
-      data: { entryId, author: ReflectionAuthor.USER, content: userMessage },
-    });
+    // await prisma.reflectionMessage.create({
+    //   data: { entryId, author: ReflectionAuthor.USER, content: userMessage },
+    // });
 
     try {
       const contextMessages = [
@@ -174,9 +175,9 @@ Guidelines:
 
       const aiText = response;
 
-      await prisma.reflectionMessage.create({
-        data: { entryId, author: ReflectionAuthor.AI, content: aiText },
-      });
+      // await prisma.reflectionMessage.create({
+      //   data: { entryId, author: ReflectionAuthor.AI, content: aiText },
+      // });
 
       const suggestions = await this.generateFollowUpSuggestions(
         userMessage,
@@ -194,13 +195,13 @@ Guidelines:
   }
 
   async initializeChat(dto: InitializeChatDto): Promise<InitialChatResponse> {
-    const { entryId, entryContent, entryType } = dto;
+    const { entryContent, entryType } = dto;
 
     try {
       const entryTypeText =
-        entryType === 'voice'
+        entryType === 'TALK'
           ? 'voice entry'
-          : entryType === 'drawing'
+          : entryType === 'DRAW'
             ? 'drawing'
             : 'entry';
 
@@ -230,9 +231,9 @@ Keep it to 2-3 sentences and make it personal to their specific entry.`;
 
       const message = await this.makeAIRequest(messages);
 
-      await prisma.reflectionMessage.create({
-        data: { entryId, author: 'AI', content: message },
-      });
+      // await prisma.reflectionMessage.create({
+      //   data: { entryId, author: 'AI', content: message },
+      // });
 
       const suggestions = await this.generateInitialSuggestions(entryContent);
 
@@ -255,7 +256,12 @@ Keep it to 2-3 sentences and make it personal to their specific entry.`;
   }
 
   private async makeAIRequest(
-    messages: Array<{ role: string; content: string }>,
+    messages: Array<{
+      role: string;
+      content:
+        | string
+        | { type: string; text?: string; image_url?: { url: string } }[];
+    }>,
   ): Promise<string> {
     try {
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
@@ -291,7 +297,9 @@ Keep it to 2-3 sentences and make it personal to their specific entry.`;
         throw new AIAPIException('No content in AI response', 500);
       }
 
-      return content;
+      return Array.isArray(content)
+        ? content.map((c) => (c.type === 'text' ? c.text : '')).join('')
+        : content;
     } catch (error) {
       if (error instanceof AIAPIException) {
         throw error;
@@ -389,5 +397,250 @@ Return ONLY a JSON array of strings like: ["prompt1", "prompt2", "prompt3", "pro
       },
       suggestions: rawAnalysis.suggestions || [],
     };
+  }
+
+  async getDrawingContext(dto: GetDrawingContextDto): Promise<DrawingContext> {
+    try {
+      const contextPrompt = `Generate a simple creative drawing prompt for journal reflection. Nothing too abstract or direct.Make sure it is something that would indicate the user's current state of mind.
+    ${dto.mood ? `Current mood: ${dto.mood}` : ''}
+    ${dto.theme ? `Theme focus: ${dto.theme}` : ''}
+    
+    Provide a drawing context that includes:
+    1. A clear, inspiring drawing prompt
+    2. 3-4 specific suggestions for elements to include
+    3. Types of shapes/elements that would be meaningful
+    
+    Please provide the analysis ONLY as valid JSON (no code fences, no explanations, no extra text). Use this exact structure:
+    {
+      "prompt": "drawing prompt text",
+      "suggestions": ["suggestion1", "suggestion2", "suggestion3"],
+      "elements": [{"type": "shape/element", "description": "meaning/purpose"}]
+    }`;
+
+      const messages = [
+        {
+          role: 'system',
+          content:
+            'You are a creative art therapy assistant. Generate inspiring drawing prompts for journal reflection. Return only valid JSON.',
+        },
+        {
+          role: 'user',
+          content: contextPrompt,
+        },
+      ];
+
+      const response = await this.makeAIRequest(messages);
+      return JSON.parse(response);
+    } catch (error) {
+      this.logger.error('Drawing context generation failed:', error);
+      throw new AIServiceException('Failed to generate drawing context');
+    }
+  }
+
+  async processImage(
+    imageBuffer: Buffer,
+    drawingContext: string,
+  ): Promise<ImageAnalysis> {
+    try {
+      // Convert image to base64 for AI API
+      const base64Image = imageBuffer.toString('base64');
+
+      const analysisPrompt = `Analyze this drawing image in relation to the context provided. Provide a critical analysis .
+    
+    Drawing Context: "${drawingContext}"
+    
+    Please analyze:
+    1. Shapes and forms present
+    2. Color palette and emotional associations
+    3. Patterns and composition
+    4. How well it aligns with the provided context
+    5. Psychological/emotional insights from the drawing
+    
+    Please provide the analysis ONLY as valid JSON (no code fences, no explanations, no extra text). Use this exact structure:
+    {
+      "shapes": [{"type": "shape", "count": number, "description": "meaning"}],
+      "colors": [{"name": "color", "dominance": percentage, "emotion": "associated emotion"}],
+      "patterns": ["pattern1", "pattern2"],
+      "contextAlignment": {"score": 1-10, "observations": ["obs1", "obs2"]},
+      "insights": ["insight1", "insight2", "insight3"]
+    }`;
+
+      const messages = [
+        {
+          role: 'system',
+          content:
+            'You are an AI art analyst specializing in psychological interpretation of drawings. Provide thoughtful analysis of artwork in relation to journal reflection context.',
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text' as const,
+              text: analysisPrompt,
+            },
+            {
+              type: 'image_url' as const,
+              image_url: {
+                url: `data:image/png;base64,${base64Image}`,
+              },
+            },
+          ],
+        },
+      ];
+
+      const response = await this.makeMultimodalRequest(messages);
+      return JSON.parse(response);
+    } catch (error) {
+      this.logger.error('Image processing failed:', error);
+      throw new AIServiceException('Failed to process image');
+    }
+  }
+
+  async convertAudioToText(audioBuffer: Buffer): Promise<AudioTranscription> {
+    try {
+      const formData = new FormData();
+
+      // Convert Node Buffer -> Uint8Array (valid BlobPart)
+      const audioBlob = new Blob([new Uint8Array(audioBuffer)], {
+        type: 'audio/wav',
+      });
+
+      formData.append('file', audioBlob, 'audio.wav');
+      formData.append('model', 'whisper-1');
+
+      const response = await fetch(`${this.baseUrl}/audio/transcriptions`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new AIAPIException(
+          `Audio transcription failed with status ${response.status}`,
+          response.status,
+        );
+      }
+
+      const data = await response.json();
+
+      return {
+        text: data.text || '',
+        confidence: data.confidence || 0.9,
+        language: data.language || 'en',
+      };
+    } catch (error) {
+      this.logger.error('Audio transcription failed:', error);
+      throw new AIServiceException('Failed to convert audio to text');
+    }
+  }
+
+  private async makeMultimodalRequest(
+    messages: {
+      role: string;
+      content:
+        | string
+        | {
+            type: 'text';
+            text: string;
+          }[]
+        | {
+            type: 'image_url';
+            image_url: { url: string };
+          }[]
+        | (
+            | { type: 'text'; text: string }
+            | { type: 'image_url'; image_url: { url: string } }
+          )[];
+    }[],
+  ) {
+    let model = 'gpt-4o-mini';
+    let temperature = 0.7;
+    let maxTokens = 800;
+    let parseJson = false;
+
+    // Minimal validation to catch malformed parts early
+    const normalized = messages.map((m) => {
+      if (Array.isArray(m.content)) {
+        // ensure each part has a supported type
+        const parts = m.content.map((p) => {
+          if (p && typeof p === 'object' && 'type' in p) {
+            if (p.type === 'text') return p as TextPart;
+            if (p.type === 'image_url') return p as ImageUrlPart;
+            if (p.type === 'input_audio') return p as InputAudioPart;
+          }
+          throw new Error(
+            `Unsupported content part in message for role "${m.role}".`,
+          );
+        });
+        return { role: m.role, content: parts };
+      }
+      // string content is fine as-is
+      return m;
+    });
+
+    try {
+      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature,
+          max_tokens: maxTokens,
+          stream: false,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        this.logger.error(
+          `AI multimodal request failed: ${response.status} - ${errorText}`,
+        );
+        throw new AIAPIException(
+          `Request failed with status ${response.status}`,
+          response.status,
+        );
+      }
+
+      const data = await response.json();
+      const content = data?.choices?.[0]?.message?.content;
+
+      console.log({ data: data.choices[0].message });
+
+      if (!content) {
+        throw new AIAPIException('No content in AI response', 500);
+      }
+
+      // content can be a string or an array of parts (return text only)
+      const text =
+        typeof content === 'string'
+          ? content
+          : Array.isArray(content)
+            ? content
+                .map((c: any) => (c?.type === 'text' ? c.text : ''))
+                .join('')
+                .trim()
+            : '';
+
+      return text;
+
+      // try {
+      //   return JSON.parse(cleaned) as T;
+      // } catch (e) {
+      //   this.logger.error('Failed to parse AI JSON response:', cleaned);
+      //   throw new AIServiceException('AI returned invalid JSON');
+      // }
+    } catch (error) {
+      if (error instanceof AIAPIException) throw error;
+      this.logger.error('AI Multimodal API Error:', error);
+      throw new AIServiceException(
+        'Failed to communicate with AI multimodal service',
+      );
+    }
   }
 }

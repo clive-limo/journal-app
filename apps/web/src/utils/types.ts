@@ -1,3 +1,5 @@
+import { number } from 'zod';
+
 export enum UploadKind {
   IMAGE = 'IMAGE',
   AUDIO = 'AUDIO',
@@ -55,4 +57,23 @@ export interface AIAnalysis {
     frequency: string;
   };
   suggestions: string[];
+}
+
+export interface ImageAnalysisResult {
+  shapes: {
+    type: string;
+    count: number;
+    description: string;
+  }[];
+  colors: {
+    name: string;
+    dominance: number;
+    emotion: string;
+  }[];
+  patterns: string[];
+  contextAlignment: {
+    score: number;
+    observations: string[];
+  };
+  insights: string[];
 }

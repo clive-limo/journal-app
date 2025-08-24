@@ -7,6 +7,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { MoodpointsModule } from './moodpoints/moodpoints.module';
 import { MediaModule } from './media/media.module';
 import { AIReflectionModule } from './ai-reflection/ai-reflection.module';
+import { MulterModule } from '@nestjs/platform-express';
 
 @Module({
   imports: [
@@ -20,6 +21,11 @@ import { AIReflectionModule } from './ai-reflection/ai-reflection.module';
         limit: 500,
       },
     ]),
+    MulterModule.register({
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB limit
+      },
+    }),
     AuthModule,
     JournalsModule,
     MoodpointsModule,

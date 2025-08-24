@@ -12,6 +12,9 @@ import {
   Plus,
   Pencil,
 } from 'lucide-vue-next';
+import ReflectionPanel from './ReflectionPanel.vue';
+import { EntryKind, type ImageAnalysisResult } from '@/utils/types';
+import { useAIReflectionStore } from '@/stores/reflections';
 
 const props = defineProps({
   onSave: {
@@ -197,10 +200,47 @@ const adjustWidth = (delta: number) => {
   currentWidth.value = penWidths[newIndex];
 };
 
-onMounted(() => {
-  initializeCanvas();
+const drawingContext = ref<{
+  prompt: string;
+  suggestions: string[];
+} | null>(null);
+const drawingDescription = ref<ImageAnalysisResult>();
+const drawingSummary = ref('No summary yet');
+const loadingContext = ref(false);
+const aiStore = useAIReflectionStore();
 
-  // Handle window resize
+const handleProcessDrawing = async () => {
+  if (!canvas.value || !hasDrawing.value) return;
+  canvas.value.toBlob(async (blob) => {
+    if (blob) {
+      const description: ImageAnalysisResult = await aiStore.processDrawing(
+        blob,
+        drawingContext?.value?.prompt || '',
+      );
+
+      const summary = [
+        `${description.contextAlignment.score}/10 context alignment score`,
+        `Emotions detected: ${description.colors.map((color: { name: string; dominance: number; emotion: string }) => color.emotion).join(', ')}`,
+        `Insights: ${description.insights.join(', ')}`,
+      ].join('\n');
+      drawingDescription.value = description;
+      drawingSummary.value = summary;
+    }
+  });
+};
+
+onMounted(async () => {
+  initializeCanvas();
+  loadingContext.value = true;
+  try {
+    const context = await aiStore.getDrawingContext();
+    drawingContext.value = context;
+  } catch (error) {
+    console.log(error);
+  } finally {
+    loadingContext.value = false;
+  }
+
   window.addEventListener('resize', initializeCanvas);
 });
 
@@ -220,6 +260,9 @@ onUnmounted(() => {
           : 'border-black/10 bg-orange-200/20'
       "
     >
+      <div class="flex flex-col items-center gap-3 p-4">
+        <Text variant="title" size="lg">{{ drawingContext?.prompt }}</Text>
+      </div>
       <!-- Canvas -->
       <div
         class="flex-1 relative bg-white rounded-2xl shadow-inner overflow-hidden min-h-[400px]"
@@ -336,13 +379,13 @@ onUnmounted(() => {
           <UiButton
             :has-icon="true"
             :is-primary="true"
-            @click="saveDrawing"
+            @click="handleProcessDrawing"
             :disabled="!hasDrawing"
           >
             <template #icon>
               <Save class="w-4 h-4" />
             </template>
-            <Text variant="subtitle" size="button">Save</Text>
+            <Text variant="subtitle" size="button">Analyze Drawing</Text>
           </UiButton>
 
           <UiButton :has-icon="false" @click="discardDrawing">
@@ -353,7 +396,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Reflections panel -->
-    <transition name="fade-slide">
+    <!-- <transition name="fade-slide">
       <div
         class="flex-[0.5] flex flex-col p-8 rounded-[50px] border-4 border-black/10 bg-orange-200/20 backdrop-blur-md"
       >
@@ -378,7 +421,11 @@ onUnmounted(() => {
           </UiButton>
         </div>
       </div>
-    </transition>
+    </transition> -->
+    <ReflectionPanel
+      :entry-content="drawingSummary"
+      :entry-type="EntryKind.DRAW"
+    />
   </div>
 </template>
 

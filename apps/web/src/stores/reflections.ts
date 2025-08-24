@@ -1,6 +1,8 @@
 // stores/aiReflection.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
+import api from '@/lib/axios';
+import type { ImageAnalysisResult } from '@/utils/types';
 
 export interface ChatMessage {
   id: string;
@@ -70,30 +72,17 @@ export const useAIReflectionStore = defineStore('aiReflection', () => {
     error.value = null;
 
     try {
-      const response = await fetch(
-        `${backendUrl.value}/ai-reflection/analyze`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            entryContent,
-            entryType,
-          }),
-        },
-      );
+      const response = await api.post<AIAnalysis>('/ai-reflection/analyze', {
+        entryContent,
+        entryType,
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(
-          errorData?.message || `Request failed with status ${response.status}`,
-        );
+      if (!response.data) {
+        throw new Error('Failed to analyze entry');
       }
 
-      const analysis = await response.json();
-      analysisData.value = analysis;
-      return analysis;
+      analysisData.value = response.data;
+      return response.data;
     } catch (err) {
       const errorMessage = handleError(err, 'Failed to analyze entry');
       error.value = errorMessage;
@@ -119,33 +108,20 @@ export const useAIReflectionStore = defineStore('aiReflection', () => {
           content: msg.content,
         })) || [];
 
-      const response = await fetch(
-        `${backendUrl.value}/ai-reflection/reflect`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userMessage,
-            entryContent,
-            conversationContext: contextMessages,
-          }),
-        },
-      );
+      const response = await api.post<{
+        content: string;
+        suggestions: string[];
+      }>(`/ai-reflection/reflect`, {
+        userMessage,
+        entryContent,
+        conversationContext: contextMessages,
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(
-          errorData?.message || `Request failed with status ${response.status}`,
-        );
+      if (!response.data) {
+        throw new Error('Failed to generate reflection response');
       }
 
-      const result = await response.json();
-      return {
-        content: result.content,
-        suggestions: result.suggestions || [],
-      };
+      return response.data;
     } catch (err) {
       const errorMessage = handleError(
         err,
@@ -168,38 +144,27 @@ export const useAIReflectionStore = defineStore('aiReflection', () => {
     error.value = null;
 
     try {
-      const response = await fetch(
-        `${backendUrl.value}/ai-reflection/initialize`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            entryContent,
-            entryType,
-          }),
-        },
-      );
+      const response = await api.post<{
+        message: string;
+        suggestions: string[];
+      }>(`/ai-reflection/initialize`, {
+        entryContent,
+        entryType,
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(
-          errorData?.message || `Request failed with status ${response.status}`,
-        );
+      if (!response.data) {
+        throw new Error('Failed to initialize chat');
       }
-
-      const result = await response.json();
 
       // Add AI greeting message
       addMessage({
         role: 'assistant',
-        content: result.message,
-        suggestions: result.suggestions,
+        content: response.data.message,
+        suggestions: response.data.suggestions,
       });
 
       // Update current suggestions
-      currentSuggestions.value = result.suggestions || [];
+      currentSuggestions.value = response.data.suggestions || [];
     } catch (err) {
       const errorMessage = handleError(err, 'Failed to initialize chat');
       error.value = errorMessage;
@@ -295,6 +260,71 @@ export const useAIReflectionStore = defineStore('aiReflection', () => {
     }
   };
 
+  // Get drawing context
+  const getDrawingContext = async (mood?: string, theme?: string) => {
+    try {
+      const params = new URLSearchParams();
+      if (mood) params.append('mood', mood);
+      if (theme) params.append('theme', theme);
+
+      const response = await api.get<{
+        prompt: string;
+        suggestions: string[];
+      }>(`/ai-reflection/drawing-context?${params}`);
+
+      if (!response.data) {
+        throw new Error('Failed to get drawing context');
+      }
+
+      return response.data;
+    } catch (err) {
+      throw new Error(handleError(err, 'Failed to get drawing context'));
+    }
+  };
+
+  // Process image
+  const processDrawing = async (imageBlob: Blob, drawingContext: string) => {
+    try {
+      const formData = new FormData();
+      formData.append('image', imageBlob, 'drawing.png');
+      formData.append('drawingContext', drawingContext);
+
+      const response = await api.post<ImageAnalysisResult>(
+        `/ai-reflection/process-image`,
+        formData,
+      );
+
+      if (!response.data) {
+        throw new Error('Failed to process image');
+      }
+
+      return response.data;
+    } catch (err) {
+      throw new Error(handleError(err, 'Failed to process drawing'));
+    }
+  };
+
+  // Convert audio
+  const convertAudio = async (audioBlob: Blob) => {
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'audio.wav');
+
+      const response = await api.post<{
+        url: string;
+        duration: number;
+      }>(`/ai-reflection/convert-audio`, formData);
+
+      if (!response.data) {
+        throw new Error('Failed to convert audio');
+      }
+
+      return response.data;
+    } catch (err) {
+      throw new Error(handleError(err, 'Failed to convert audio'));
+    }
+  };
+
   // Helper Methods
   const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -326,6 +356,9 @@ export const useAIReflectionStore = defineStore('aiReflection', () => {
     clearError,
     retry,
     setBackendUrl,
+    getDrawingContext,
+    processDrawing,
+    convertAudio,
 
     // Helper methods
     generateId,
