@@ -15,7 +15,8 @@
     "build:api": "npx turbo run build --filter=./apps/api...",
     "start:api": "node apps/api/dist/main.js",
 
-    "render:build": "npm ci && npm run prisma:generate && npm run build:api"
+    "render:build": "npm ci && npm run prisma:generate && npm run build:api",
+    "build:web": "npx turbo run build --filter=./apps/web..."
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
