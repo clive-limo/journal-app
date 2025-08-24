@@ -13,7 +13,7 @@ import {
   Pencil,
 } from 'lucide-vue-next';
 import ReflectionPanel from './ReflectionPanel.vue';
-import { EntryKind } from '@/utils/types';
+import { EntryKind, type ImageAnalysisResult } from '@/utils/types';
 import { useAIReflectionStore } from '@/stores/reflections';
 
 const props = defineProps({
@@ -203,9 +203,8 @@ const adjustWidth = (delta: number) => {
 const drawingContext = ref<{
   prompt: string;
   suggestions: string[];
-  elements: Array<{ type: string; description: string }>;
 } | null>(null);
-const drawingDescription = ref('No drawing yet');
+const drawingDescription = ref<ImageAnalysisResult>();
 const drawingSummary = ref('No summary yet');
 const loadingContext = ref(false);
 const aiStore = useAIReflectionStore();
@@ -214,13 +213,14 @@ const handleProcessDrawing = async () => {
   if (!canvas.value || !hasDrawing.value) return;
   canvas.value.toBlob(async (blob) => {
     if (blob) {
-      const description = await aiStore.processDrawing(
+      const description: ImageAnalysisResult = await aiStore.processDrawing(
         blob,
         drawingContext?.value?.prompt || '',
       );
+
       const summary = [
         `${description.contextAlignment.score}/10 context alignment score`,
-        `Emotions detected: ${description.colors.map((color: { name: string; dominance: string; emotion: string }) => color.emotion).join(', ')}`,
+        `Emotions detected: ${description.colors.map((color: { name: string; dominance: number; emotion: string }) => color.emotion).join(', ')}`,
         `Insights: ${description.insights.join(', ')}`,
       ].join('\n');
       drawingDescription.value = description;

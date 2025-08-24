@@ -9,6 +9,8 @@ import {
   UploadedFile,
   Query,
   Get,
+  Param,
+  UseGuards,
 } from '@nestjs/common';
 import { AIReflectionService } from './ai-reflection.service';
 import {
@@ -26,12 +28,19 @@ import {
   ReflectionResponse,
 } from './interfaces/ai-analysis.interface';
 import { AIServiceException } from './exceptions/ai-service.exceptions';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { File as MulterFile } from 'multer';
 
 @Controller('ai-reflection')
+@UseGuards(JwtAuthGuard)
 export class AIReflectionController {
   constructor(private readonly aiReflectionService: AIReflectionService) {}
+
+  @Get('history/:entryId')
+  async history(@Param('entryId') entryId: string) {
+    return this.aiReflectionService.getReflectionHistory(entryId);
+  }
 
   @Post('analyze')
   async analyzeEntry(

@@ -10,6 +10,7 @@ import {
   Brain,
   Target,
   BookOpen,
+  AlertOctagon,
   Share2,
   Download,
 } from 'lucide-vue-next';

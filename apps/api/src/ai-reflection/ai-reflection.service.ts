@@ -1,5 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { prisma } from '@journal/database';
+// import { ReflectionAuthor } from '@prisma/client';
 import {
   CreateAnalysisDto,
   CreateReflectionDto,
@@ -82,19 +84,53 @@ Please provide the analysis ONLY as valid JSON (no code fences, no explanations,
 
       const response = await this.makeAIRequest(messages);
 
+      let parsed: any;
       try {
-        const analysis = JSON.parse(response);
-        return this.formatAnalysisResponse(analysis, entryContent);
+        parsed = JSON.parse(response);
       } catch (parseError) {
         this.logger.error('Failed to parse AI analysis response:', parseError);
         throw new AIServiceException('Invalid response from AI service');
       }
+
+      const analysis = this.formatAnalysisResponse(parsed, entryContent);
+
+      // await prisma.aiAnalysis.upsert({
+      //   where: { entryId },
+      //   create: {
+      //     entryId,
+      //     moodPrimary: analysis.mood.primary,
+      //     moodSecondary: analysis.mood.secondary,
+      //     moodScore: analysis.mood.score,
+      //     color: analysis.mood.color,
+      //     themes: analysis.themes,
+      //     insights: analysis.insights,
+      //     patterns: analysis.patterns,
+      //     suggestions: analysis.suggestions,
+      //     raw: parsed,
+      //   },
+      //   update: {
+      //     moodPrimary: analysis.mood.primary,
+      //     moodSecondary: analysis.mood.secondary,
+      //     moodScore: analysis.mood.score,
+      //     color: analysis.mood.color,
+      //     themes: analysis.themes,
+      //     insights: analysis.insights,
+      //     patterns: analysis.patterns,
+      //     suggestions: analysis.suggestions,
+      //     raw: parsed,
+      //   },
+      // });
+
+      return analysis;
     } catch (error) {
-      if (error instanceof AIServiceException) {
-        throw error;
+      if (error instanceof AIServiceException) throw error;
+      if (error instanceof AIAPIException) {
+        throw new HttpException(error.message, error.getStatus());
       }
-      this.logger.error('Analysis generation failed:', error);
-      throw new AIServiceException('Failed to generate entry analysis');
+      throw new HttpException(
+        'Internal server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -102,6 +138,10 @@ Please provide the analysis ONLY as valid JSON (no code fences, no explanations,
     dto: CreateReflectionDto,
   ): Promise<ReflectionResponse> {
     const { userMessage, entryContent, conversationContext = [] } = dto;
+
+    // await prisma.reflectionMessage.create({
+    //   data: { entryId, author: ReflectionAuthor.USER, content: userMessage },
+    // });
 
     try {
       const contextMessages = [
@@ -132,13 +172,20 @@ Guidelines:
       ];
 
       const response = await this.makeAIRequest(contextMessages);
+
+      const aiText = response;
+
+      // await prisma.reflectionMessage.create({
+      //   data: { entryId, author: ReflectionAuthor.AI, content: aiText },
+      // });
+
       const suggestions = await this.generateFollowUpSuggestions(
         userMessage,
-        response,
+        aiText,
       );
 
       return {
-        content: response,
+        content: aiText,
         suggestions,
       };
     } catch (error) {
@@ -183,6 +230,11 @@ Keep it to 2-3 sentences and make it personal to their specific entry.`;
       ];
 
       const message = await this.makeAIRequest(messages);
+
+      // await prisma.reflectionMessage.create({
+      //   data: { entryId, author: 'AI', content: message },
+      // });
+
       const suggestions = await this.generateInitialSuggestions(entryContent);
 
       return {
@@ -193,6 +245,14 @@ Keep it to 2-3 sentences and make it personal to their specific entry.`;
       this.logger.error('Chat initialization failed:', error);
       throw new AIServiceException('Failed to initialize chat');
     }
+  }
+
+  async getReflectionHistory(entryId: string, limit = 50) {
+    return prisma.reflectionMessage.findMany({
+      where: { entryId },
+      orderBy: { createdAt: 'asc' },
+      take: limit,
+    });
   }
 
   private async makeAIRequest(
