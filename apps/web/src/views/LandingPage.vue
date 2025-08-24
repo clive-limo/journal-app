@@ -5,40 +5,39 @@ import UiButton from '@/components/Ui/UiButton.vue';
 import router from '@/router';
 import { cardDetails } from '@/utils/data';
 import { MoveRight, UserRound } from 'lucide-vue-next';
-import { computed, onMounted } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-import { storeToRefs } from 'pinia'
+import { useAuthStore } from '@/stores/auth';
+import { storeToRefs } from 'pinia';
+import { computed, onMounted } from 'vue';
 
-const auth = useAuthStore()
-const { user, defaultJournal, isLoading } = storeToRefs(auth)
+const auth = useAuthStore();
+const { user, defaultJournal, isLoading } = storeToRefs(auth);
 
-const handleLogin = () => {
-  auth.loginWithGoogle()
+const handleLogin = async () => {
+  await auth.loginWithGoogle();
 };
 
 const createEntry = () => {
   if (defaultJournal.value) {
     // Navigate to create entry page with the default journal ID
-    router.push(`/journals/${defaultJournal.value.id}/entries/new`)
+    router.push(`/journals/${defaultJournal.value.id}/entries/new`);
   }
-}
-
+};
 
 const viewEntries = () => {
   if (defaultJournal.value) {
-    router.push(`/journals/${defaultJournal.value.id}/entries`)
+    router.push(`/journals/${defaultJournal.value.id}/entries`);
   }
-}
+};
 
 onMounted(() => {
   // User data including default journal is already loaded from auth store
-  console.log('User:', user.value)
-  console.log('Default Journal:', defaultJournal.value)
-})
+  console.log('User:', user.value);
+  console.log('Default Journal:', defaultJournal.value);
+});
 
 const goToHome = () => {
-  router.push({ name: 'Home' })
-}
+  router.push({ name: 'Home' });
+};
 </script>
 
 <template>
@@ -49,12 +48,7 @@ const goToHome = () => {
         src="@/assets/images/echo_journal_logo.png"
         class="h-[89px] w-[171px]"
       />
-      <UiButton
-        :has-icon="true"
-        icon-location="after"
-        @click="() => {}"
-        :delay="4000"
-      >
+      <UiButton :has-icon="true" icon-location="after" @click="() => {}">
         <template #icon>
           <UserRound />
         </template>
