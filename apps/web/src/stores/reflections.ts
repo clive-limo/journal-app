@@ -295,6 +295,66 @@ export const useAIReflectionStore = defineStore('aiReflection', () => {
     }
   };
 
+  // Get drawing context
+  const getDrawingContext = async (mood?: string, theme?: string) => {
+    try {
+      const params = new URLSearchParams();
+      if (mood) params.append('mood', mood);
+      if (theme) params.append('theme', theme);
+
+      const response = await fetch(
+        `${backendUrl.value}/ai-reflection/drawing-context?${params}`,
+      );
+      if (!response.ok) throw new Error('Failed to get drawing context');
+      return await response.json();
+    } catch (err) {
+      throw new Error(handleError(err, 'Failed to get drawing context'));
+    }
+  };
+
+  // Process image
+  const processDrawing = async (imageBlob: Blob, drawingContext: string) => {
+    try {
+      const formData = new FormData();
+      formData.append('image', imageBlob, 'drawing.png');
+      formData.append('drawingContext', drawingContext);
+
+      const response = await fetch(
+        `${backendUrl.value}/ai-reflection/process-image`,
+        {
+          method: 'POST',
+          body: formData,
+        },
+      );
+
+      if (!response.ok) throw new Error('Failed to process image');
+      return await response.json();
+    } catch (err) {
+      throw new Error(handleError(err, 'Failed to process drawing'));
+    }
+  };
+
+  // Convert audio
+  const convertAudio = async (audioBlob: Blob) => {
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'audio.wav');
+
+      const response = await fetch(
+        `${backendUrl.value}/ai-reflection/convert-audio`,
+        {
+          method: 'POST',
+          body: formData,
+        },
+      );
+
+      if (!response.ok) throw new Error('Failed to convert audio');
+      return await response.json();
+    } catch (err) {
+      throw new Error(handleError(err, 'Failed to convert audio'));
+    }
+  };
+
   // Helper Methods
   const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -326,6 +386,9 @@ export const useAIReflectionStore = defineStore('aiReflection', () => {
     clearError,
     retry,
     setBackendUrl,
+    getDrawingContext,
+    processDrawing,
+    convertAudio,
 
     // Helper methods
     generateId,
