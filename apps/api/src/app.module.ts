@@ -6,6 +6,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { MoodpointsModule } from './moodpoints/moodpoints.module';
 import { MediaModule } from './media/media.module';
+import { AIReflectionModule } from './ai-reflection/ai-reflection.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { MediaModule } from './media/media.module';
     JournalsModule,
     MoodpointsModule,
     MediaModule,
+    AIReflectionModule,
   ],
   controllers: [],
   providers: [
