@@ -1,15 +1,15 @@
-import { defineStore } from "pinia";
-import { ref } from "vue";
-import api from "@/lib/axios";
+import { defineStore } from 'pinia';
+import { ref } from 'vue';
+import api from '@/lib/axios';
 import type {
   PresignUpload,
   PresignResponse,
   AttachUploadedMedia,
   MediaObject,
-} from "@/types/media";
-import { UploadKind } from "@/types/media";
+} from '@/types/media';
+import { UploadKind } from '@/types/media';
 
-export const useMediaStore = defineStore("media", () => {
+export const useMediaStore = defineStore('media', () => {
   const uploadQueue = ref<MediaObject[]>([]);
   const uploadedMedia = ref<MediaObject[]>([]);
   const isUploading = ref(false);
@@ -20,35 +20,35 @@ export const useMediaStore = defineStore("media", () => {
   const MAX_AUDIO_SIZE = 50 * 1024 * 1024; // 50MB
 
   const ALLOWED_IMAGE_TYPES = [
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "image/heic",
-    "image/heif",
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/heic',
+    'image/heif',
   ];
 
   const ALLOWED_AUDIO_TYPES = [
-    "audio/mpeg",
-    "audio/mp3",
-    "audio/wav",
-    "audio/webm",
-    "audio/ogg",
-    "audio/mp4",
-    "audio/x-m4a",
+    'audio/mpeg',
+    'audio/mp3',
+    'audio/wav',
+    'audio/webm',
+    'audio/ogg',
+    'audio/mp4',
+    'audio/x-m4a',
   ];
 
   // Validation
   function validateFile(file: File, kind: UploadKind): string | null {
     if (kind === UploadKind.IMAGE) {
       if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-        return `Invalid image type. Allowed: ${ALLOWED_IMAGE_TYPES.join(", ")}`;
+        return `Invalid image type. Allowed: ${ALLOWED_IMAGE_TYPES.join(', ')}`;
       }
       if (file.size > MAX_IMAGE_SIZE) {
         return `Image too large. Maximum size: ${MAX_IMAGE_SIZE / 1024 / 1024}MB`;
       }
     } else {
       if (!ALLOWED_AUDIO_TYPES.includes(file.type)) {
-        return `Invalid audio type. Allowed: ${ALLOWED_AUDIO_TYPES.join(", ")}`;
+        return `Invalid audio type. Allowed: ${ALLOWED_AUDIO_TYPES.join(', ')}`;
       }
       if (file.size > MAX_AUDIO_SIZE) {
         return `Audio too large. Maximum size: ${MAX_AUDIO_SIZE / 1024 / 1024}MB`;
@@ -59,7 +59,7 @@ export const useMediaStore = defineStore("media", () => {
 
   // Get file dimensions for images
   async function getImageDimensions(
-    file: File
+    file: File,
   ): Promise<{ width: number; height: number }> {
     return new Promise((resolve) => {
       const img = new Image();
@@ -89,9 +89,9 @@ export const useMediaStore = defineStore("media", () => {
 
   // Get presigned URL from backend
   async function getPresignedUrl(
-    presign: PresignUpload
+    presign: PresignUpload,
   ): Promise<PresignResponse> {
-    const { data } = await api.post<PresignResponse>("/media/presign", presign);
+    const { data } = await api.post<PresignResponse>('/media/presign', presign);
     return data;
   }
 
@@ -99,19 +99,19 @@ export const useMediaStore = defineStore("media", () => {
   async function uploadToS3(
     file: File,
     presignData: PresignResponse,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
 
-      xhr.upload.addEventListener("progress", (e) => {
+      xhr.upload.addEventListener('progress', (e) => {
         if (e.lengthComputable && onProgress) {
           const progress = Math.round((e.loaded / e.total) * 100);
           onProgress(progress);
         }
       });
 
-      xhr.addEventListener("load", () => {
+      xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve();
         } else {
@@ -119,8 +119,8 @@ export const useMediaStore = defineStore("media", () => {
         }
       });
 
-      xhr.addEventListener("error", () => {
-        reject(new Error("Upload failed"));
+      xhr.addEventListener('error', () => {
+        reject(new Error('Upload failed'));
       });
 
       xhr.open(presignData.method, presignData.uploadUrl);
@@ -136,11 +136,11 @@ export const useMediaStore = defineStore("media", () => {
   // Attach media to journal entry
   async function attachMediaToEntry(
     entryId: string,
-    mediaData: AttachUploadedMedia
+    mediaData: AttachUploadedMedia,
   ): Promise<MediaObject> {
     const { data } = await api.post<MediaObject>(
       `/journals/entries/${entryId}/media`,
-      mediaData
+      mediaData,
     );
     return data;
   }
@@ -149,7 +149,7 @@ export const useMediaStore = defineStore("media", () => {
   async function uploadFile(
     file: File,
     kind: UploadKind,
-    entryId?: string
+    entryId?: string,
   ): Promise<MediaObject> {
     const validationError = validateFile(file, kind);
     if (validationError) {
@@ -158,8 +158,8 @@ export const useMediaStore = defineStore("media", () => {
 
     // Create media object
     const mediaObj: MediaObject = {
-      kind: kind as "IMAGE" | "AUDIO",
-      url: "",
+      kind: kind as 'IMAGE' | 'AUDIO',
+      url: '',
       fileName: file.name,
       fileSize: file.size,
       mimeType: file.type,
@@ -223,8 +223,7 @@ export const useMediaStore = defineStore("media", () => {
       return mediaObj;
     } catch (err: any) {
       mediaObj.isUploading = false;
-      mediaObj.error = err.message || "Upload failed";
-      error.value = mediaObj.error;
+      mediaObj.error = err.message || 'Upload failed';
       throw err;
     } finally {
       isUploading.value = uploadQueue.value.some((m) => m.isUploading);
@@ -235,7 +234,7 @@ export const useMediaStore = defineStore("media", () => {
   async function uploadMultiple(
     files: FileList | File[],
     kind: UploadKind,
-    entryId?: string
+    entryId?: string,
   ): Promise<MediaObject[]> {
     const filesArray = Array.from(files);
     const results: MediaObject[] = [];

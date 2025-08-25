@@ -287,7 +287,7 @@ const formatTime = (date: Date) => {
           class="p-4 border-t border-black/10"
         >
           <Text variant="body" size="sm" class="text-gray-600 mb-3"
-            >Suggested questions to get started:</Text
+            >Starting reflection settion...</Text
           >
           <div class="flex flex-wrap gap-2">
             <button

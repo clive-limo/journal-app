@@ -6,6 +6,7 @@ import {
   IsEnum,
   ValidateNested,
   IsOptional,
+  IsArray,
 } from 'class-validator';
 
 export class CreateAnalysisDto {
@@ -22,6 +23,16 @@ export class CreateAnalysisDto {
   entryType: string;
 }
 
+export class ConversationMessageDto {
+  @IsString()
+  @IsNotEmpty()
+  role: string;
+
+  @IsString()
+  @IsNotEmpty()
+  content: string;
+}
+
 export class CreateReflectionDto {
   // @IsString()
   // @IsNotEmpty()
@@ -31,16 +42,15 @@ export class CreateReflectionDto {
   @IsNotEmpty()
   userMessage: string;
 
+  @IsOptional()
   @IsString()
   entryContent?: string;
 
   @IsOptional()
+  @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => Object)
-  conversationContext?: Array<{
-    role: string;
-    content: string;
-  }>;
+  @Type(() => ConversationMessageDto)
+  conversationContext?: ConversationMessageDto[];
 }
 
 export class InitializeChatDto {
