@@ -224,6 +224,7 @@ export const useMediaStore = defineStore('media', () => {
     } catch (err: any) {
       mediaObj.isUploading = false;
       mediaObj.error = err.message || 'Upload failed';
+      // error.value = mediaObj.error;
       throw err;
     } finally {
       isUploading.value = uploadQueue.value.some((m) => m.isUploading);

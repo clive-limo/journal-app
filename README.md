@@ -1,4 +1,6 @@
-# Journal App -- CTRL_ALT_ELITE TEAM
+# Journal App 
+
+Team **CTRL_ALT_ELITE TEAM**
 
 # Table of Contents
 
@@ -26,7 +28,7 @@ We are a team of 2 members:
 
 # About our project 
 
-[Journal APP](https://cxxx.netlify.app/) <br />
+[Journal APP](https://journal-app-web-xi.vercel.app/) <br />
 This app helps you capture your thoughts and learn from them. Write, talk, or draw. Keep your entries in one place. Build a steady habit and see your mood over time.
 
 This project is part of **Co-Creating with GPT-5** Hackathon sponsored by [lablab.ai](https://lablab.ai/) 
@@ -51,7 +53,7 @@ Goal: Analyze an entry and save a normalized result. Guide short reflections and
 
 ## Step 1: Access the app & register
 
-Open the app at **`https://journal.com`**.
+Open the app at **`https://journal-app-web-xi.vercel.app`**.
 
 You’ll land on your **Get Started** view.
 
@@ -104,7 +106,7 @@ Already have an account? Click **LOGIN** in the top right corner and:
 
 # Watch the video Walkthrough
 
-[![App Walkthrough]()]( "App Walkthrough")
+App Walkthrough https://www.loom.com/share/0f81ee1fa7b14727a65d86fff43a217e?sid=cb1b541d-f9ff-4bd0-81c5-c44a2c38ebca
 
 # License
 
