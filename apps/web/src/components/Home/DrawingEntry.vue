@@ -11,8 +11,11 @@ import {
   Minus,
   Plus,
   Pencil,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-vue-next';
 import ReflectionPanel from './ReflectionPanel.vue';
+import ImageAnalysisPanel from './ImageAnalysisPanel.vue';
 import { EntryKind, type ImageAnalysisResult } from '@/utils/types';
 import { useAIReflectionStore } from '@/stores/reflections';
 
@@ -174,6 +177,8 @@ const clearCanvas = () => {
     canvas.value.height / window.devicePixelRatio,
   );
   hasDrawing.value = false;
+  // Clear analysis when canvas is cleared
+  drawingAnalysis.value = null;
 };
 
 const saveDrawing = () => {
@@ -200,47 +205,77 @@ const adjustWidth = (delta: number) => {
   currentWidth.value = penWidths[newIndex];
 };
 
+// Drawing context and analysis states
 const drawingContext = ref<{
   prompt: string;
   suggestions: string[];
 } | null>(null);
-const drawingDescription = ref<ImageAnalysisResult>();
-const drawingSummary = ref('No summary yet');
+const drawingAnalysis = ref<ImageAnalysisResult | null>(null);
 const loadingContext = ref(false);
+const contextError = ref<string | null>(null);
+const analyzingDrawing = ref(false);
+const analysisError = ref<string | null>(null);
+
 const aiStore = useAIReflectionStore();
 
-const handleProcessDrawing = async () => {
-  if (!canvas.value || !hasDrawing.value) return;
-  canvas.value.toBlob(async (blob) => {
-    if (blob) {
-      const description: ImageAnalysisResult = await aiStore.processDrawing(
-        blob,
-        drawingContext?.value?.prompt || '',
-      );
-
-      const summary = [
-        `${description.contextAlignment.score}/10 context alignment score`,
-        `Emotions detected: ${description.colors.map((color: { name: string; dominance: number; emotion: string }) => color.emotion).join(', ')}`,
-        `Insights: ${description.insights.join(', ')}`,
-      ].join('\n');
-      drawingDescription.value = description;
-      drawingSummary.value = summary;
-    }
-  });
-};
-
-onMounted(async () => {
-  initializeCanvas();
+const loadDrawingContext = async () => {
   loadingContext.value = true;
+  contextError.value = null;
+
   try {
     const context = await aiStore.getDrawingContext();
     drawingContext.value = context;
   } catch (error) {
-    console.log(error);
+    console.error('Failed to load drawing context:', error);
+    contextError.value = 'Failed to load drawing prompt. Please try again.';
   } finally {
     loadingContext.value = false;
   }
+};
 
+const handleProcessDrawing = async () => {
+  if (!canvas.value || !hasDrawing.value) return;
+
+  analyzingDrawing.value = true;
+  analysisError.value = null;
+
+  try {
+    canvas.value.toBlob(async (blob) => {
+      if (blob) {
+        try {
+          const analysis = await aiStore.processDrawing(
+            blob,
+            drawingContext.value?.prompt || '',
+          );
+          drawingAnalysis.value = analysis;
+        } catch (error) {
+          console.error('Failed to analyze drawing:', error);
+          analysisError.value = 'Failed to analyze drawing. Please try again.';
+        } finally {
+          analyzingDrawing.value = false;
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Failed to process drawing:', error);
+    analysisError.value = 'Failed to process drawing. Please try again.';
+    analyzingDrawing.value = false;
+  }
+};
+
+const retryAnalysis = () => {
+  analysisError.value = null;
+  handleProcessDrawing();
+};
+
+const closeAnalysis = () => {
+  drawingAnalysis.value = null;
+  analysisError.value = null;
+};
+
+onMounted(async () => {
+  initializeCanvas();
+  await loadDrawingContext();
   window.addEventListener('resize', initializeCanvas);
 });
 
@@ -253,177 +288,231 @@ onUnmounted(() => {
   <div class="flex-1 flex flex-row gap-4">
     <!-- Drawing Canvas Area -->
     <div
-      class="flex-1 flex flex-col gap-4 p-6 rounded-[50px] border-4 transition-all duration-300"
+      class="flex-1 flex flex-row gap-4 p-6 rounded-[50px] border-4 transition-all duration-300"
       :class="
         isDrawing
           ? 'border-blue-300 bg-blue-100/30'
           : 'border-black/10 bg-orange-200/20'
       "
     >
-      <div class="flex flex-col items-center gap-3 p-4">
-        <Text variant="title" size="lg">{{ drawingContext?.prompt }}</Text>
-      </div>
-      <!-- Canvas -->
-      <div
-        class="flex-1 relative bg-white rounded-2xl shadow-inner overflow-hidden min-h-[400px]"
-      >
-        <canvas
-          ref="canvas"
-          class="w-full h-full cursor-crosshair"
-          :class="{ 'cursor-grab': isErasing }"
-          @mousedown="startDrawing"
-          @mousemove="draw"
-          @mouseup="stopDrawing"
-          @mouseleave="stopDrawing"
-          @touchstart.prevent="startDrawing"
-          @touchmove.prevent="draw"
-          @touchend.prevent="stopDrawing"
-        />
-
-        <!-- Status indicator -->
-        <div
-          class="absolute top-4 left-4 px-3 py-1 bg-black/10 rounded-full backdrop-blur-sm"
-        >
-          <Text variant="body" size="sm" class="text-gray-700">
-            {{ isErasing ? 'Erasing' : `Drawing with ${currentColor}` }}
-          </Text>
-        </div>
-      </div>
-
-      <!-- Drawing Controls -->
-      <div class="flex flex-col gap-4">
-        <!-- Color Palette -->
-        <div class="flex flex-wrap items-center justify-center gap-2">
-          <div
-            v-for="color in colorPalette"
-            :key="color"
-            class="w-8 h-8 rounded-full cursor-pointer border-2 transition-all duration-200 hover:scale-110"
-            :class="
-              currentColor === color && !isErasing
-                ? 'border-gray-800 scale-110'
-                : 'border-gray-300'
-            "
-            :style="{ backgroundColor: color }"
-            @click="selectColor(color)"
-          />
-
-          <!-- Eraser -->
-          <UiButton
-            :has-icon="true"
-            icon-location="after"
-            class="rounded-full h-8 w-8 ml-2"
-            @click="toggleEraser"
-          >
-            <template #icon>
-              <Eraser v-if="!isErasing" :size="12" />
-              <Pencil v-else :size="12" />
-            </template>
-          </UiButton>
-        </div>
-
-        <!-- Pen Width Control -->
-        <div class="flex items-center justify-center gap-3">
-          <UiButton
-            :has-icon="true"
-            icon-location="after"
-            size="sm"
-            class="rounded-full"
-            @click="adjustWidth(-1)"
-            :disabled="currentWidth === penWidths[0]"
-          >
-            <template #icon>
-              <Minus :size="12" />
-            </template>
-          </UiButton>
-
-          <div class="flex items-center gap-2">
+      <div class="flex-1 flex flex-col">
+        <!-- Drawing Prompt Header -->
+        <div class="flex flex-col items-center gap-3 p-4">
+          <!-- Loading State -->
+          <div v-if="loadingContext" class="flex items-center gap-3">
             <div
-              class="rounded-full bg-gray-800 transition-all duration-200"
-              :style="{
-                width: `${Math.max(currentWidth * 2, 8)}px`,
-                height: `${Math.max(currentWidth * 2, 8)}px`,
-              }"
-            />
-            <Text variant="body" size="sm" class="w-8 text-center"
-              >{{ currentWidth }}px</Text
-            >
+              class="w-6 h-6 border-2 border-orange-300 rounded-full animate-spin border-t-orange-600"
+            ></div>
+            <Text variant="title" size="lg" class="text-gray-500">
+              Loading drawing prompt...
+            </Text>
           </div>
 
-          <UiButton
-            :has-icon="true"
-            icon-location="after"
-            size="sm"
-            class="rounded-full"
-            @click="adjustWidth(1)"
-            :disabled="currentWidth === penWidths[penWidths.length - 1]"
+          <!-- Error State -->
+          <div
+            v-else-if="contextError"
+            class="flex flex-col items-center gap-2"
           >
-            <template #icon>
-              <Plus :size="12" />
-            </template>
-          </UiButton>
+            <div class="flex items-center gap-2 text-red-600">
+              <AlertTriangle class="w-5 h-5" />
+              <Text variant="title" size="md" class="text-red-600">
+                {{ contextError }}
+              </Text>
+            </div>
+            <UiButton
+              :has-icon="true"
+              size="sm"
+              @click="loadDrawingContext"
+              class="text-sm"
+            >
+              <template #icon>
+                <RefreshCw class="w-4 h-4" />
+              </template>
+              <Text variant="subtitle" size="sm">Retry</Text>
+            </UiButton>
+          </div>
+
+          <!-- Success State -->
+          <Text v-else variant="title" size="lg">
+            {{ drawingContext?.prompt || 'Express yourself through drawing' }}
+          </Text>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="flex items-center justify-center gap-4">
-          <UiButton
-            :has-icon="true"
-            @click="clearCanvas"
-            :disabled="!hasDrawing"
-          >
-            <template #icon>
-              <RotateCcw class="w-4 h-4" />
-            </template>
-            <Text variant="subtitle" size="button">Clear</Text>
-          </UiButton>
+        <!-- Canvas -->
+        <div
+          class="flex-1 relative bg-white rounded-2xl shadow-inner overflow-hidden min-h-[400px]"
+        >
+          <canvas
+            ref="canvas"
+            class="w-full h-full cursor-crosshair"
+            :class="{ 'cursor-grab': isErasing }"
+            @mousedown="startDrawing"
+            @mousemove="draw"
+            @mouseup="stopDrawing"
+            @mouseleave="stopDrawing"
+            @touchstart.prevent="startDrawing"
+            @touchmove.prevent="draw"
+            @touchend.prevent="stopDrawing"
+          />
 
-          <UiButton
-            :has-icon="true"
-            :is-primary="true"
-            @click="handleProcessDrawing"
-            :disabled="!hasDrawing"
+          <!-- Status indicator -->
+          <div
+            class="absolute top-4 left-4 px-3 py-1 bg-black/10 rounded-full backdrop-blur-sm"
           >
-            <template #icon>
-              <Save class="w-4 h-4" />
-            </template>
-            <Text variant="subtitle" size="button">Analyze Drawing</Text>
-          </UiButton>
-
-          <UiButton :has-icon="false" @click="discardDrawing">
-            <Text variant="subtitle" size="button">Discard</Text>
-          </UiButton>
+            <Text variant="body" size="sm" class="text-gray-700">
+              {{ isErasing ? 'Erasing' : `Drawing with ${currentColor}` }}
+            </Text>
+          </div>
         </div>
+
+        <!-- Drawing Controls -->
+        <div class="flex flex-col gap-4">
+          <!-- Color Palette -->
+          <div class="flex flex-wrap items-center justify-center gap-2">
+            <div
+              v-for="color in colorPalette"
+              :key="color"
+              class="w-8 h-8 rounded-full cursor-pointer border-2 transition-all duration-200 hover:scale-110"
+              :class="
+                currentColor === color && !isErasing
+                  ? 'border-gray-800 scale-110'
+                  : 'border-gray-300'
+              "
+              :style="{ backgroundColor: color }"
+              @click="selectColor(color)"
+            />
+
+            <!-- Eraser -->
+            <UiButton
+              :has-icon="true"
+              icon-location="after"
+              class="rounded-full h-8 w-8 ml-2"
+              @click="toggleEraser"
+            >
+              <template #icon>
+                <Eraser v-if="!isErasing" :size="12" />
+                <Pencil v-else :size="12" />
+              </template>
+            </UiButton>
+          </div>
+
+          <!-- Pen Width Control -->
+          <div class="flex items-center justify-center gap-3">
+            <UiButton
+              :has-icon="true"
+              icon-location="after"
+              size="sm"
+              class="rounded-full"
+              @click="adjustWidth(-1)"
+              :disabled="currentWidth === penWidths[0]"
+            >
+              <template #icon>
+                <Minus :size="12" />
+              </template>
+            </UiButton>
+
+            <div class="flex items-center gap-2">
+              <div
+                class="rounded-full bg-gray-800 transition-all duration-200"
+                :style="{
+                  width: `${Math.max(currentWidth * 2, 8)}px`,
+                  height: `${Math.max(currentWidth * 2, 8)}px`,
+                }"
+              />
+              <Text variant="body" size="sm" class="w-8 text-center"
+                >{{ currentWidth }}px</Text
+              >
+            </div>
+
+            <UiButton
+              :has-icon="true"
+              icon-location="after"
+              size="sm"
+              class="rounded-full"
+              @click="adjustWidth(1)"
+              :disabled="currentWidth === penWidths[penWidths.length - 1]"
+            >
+              <template #icon>
+                <Plus :size="12" />
+              </template>
+            </UiButton>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex items-center justify-center gap-4">
+            <UiButton
+              :has-icon="true"
+              @click="clearCanvas"
+              :disabled="!hasDrawing"
+            >
+              <template #icon>
+                <RotateCcw class="w-4 h-4" />
+              </template>
+              <Text variant="subtitle" size="button">Clear</Text>
+            </UiButton>
+
+            <UiButton
+              :has-icon="true"
+              :is-primary="true"
+              @click="handleProcessDrawing"
+              :disabled="!hasDrawing || analyzingDrawing"
+            >
+              <template #icon>
+                <div
+                  v-if="analyzingDrawing"
+                  class="w-4 h-4 border-2 border-white rounded-full animate-spin border-t-transparent"
+                ></div>
+                <Sparkles v-else class="w-4 h-4" />
+              </template>
+              <Text variant="subtitle" size="button">
+                {{ analyzingDrawing ? 'Analyzing...' : 'Analyze Drawing' }}
+              </Text>
+            </UiButton>
+
+            <UiButton :has-icon="false" @click="discardDrawing">
+              <Text variant="subtitle" size="button">Discard</Text>
+            </UiButton>
+          </div>
+
+          <!-- Analysis Error -->
+          <div
+            v-if="analysisError"
+            class="flex items-center justify-center gap-2 p-3 bg-red-50 rounded-lg border border-red-200"
+          >
+            <AlertTriangle class="w-4 h-4 text-red-600" />
+            <Text variant="body" size="sm" class="text-red-700">{{
+              analysisError
+            }}</Text>
+            <UiButton
+              :has-icon="true"
+              size="sm"
+              @click="retryAnalysis"
+              class="ml-2"
+            >
+              <template #icon>
+                <RefreshCw class="w-3 h-3" />
+              </template>
+            </UiButton>
+          </div>
+        </div>
+      </div>
+      <div class="flex-[0.5] h-fit">
+        <!-- Image Analysis Panel -->
+        <ImageAnalysisPanel
+          :analysis="drawingAnalysis"
+          :is-loading="analyzingDrawing"
+          :on-close="closeAnalysis"
+        />
       </div>
     </div>
 
-    <!-- Reflections panel -->
-    <!-- <transition name="fade-slide">
-      <div
-        class="flex-[0.5] flex flex-col p-8 rounded-[50px] border-4 border-black/10 bg-orange-200/20 backdrop-blur-md"
-      >
-        <div
-          class="flex-1 flex flex-col items-center justify-center text-center gap-4"
-        >
-          <Text variant="title" size="lg">Reflection</Text>
-          <Text variant="body" size="sm" class="w-2/3"
-            >Step back and take a closer look at your drawing — with a little
-            help from AI to spot patterns and insights...</Text
-          >
-          <UiButton
-            :has-icon="true"
-            :is-primary="true"
-            icon-location="after"
-            @click="() => {}"
-          >
-            <template #icon>
-              <Sparkles />
-            </template>
-            <p>Start</p>
-          </UiButton>
-        </div>
-      </div>
-    </transition> -->
+    <!-- Reflection Panel -->
     <ReflectionPanel
-      :entry-content="drawingSummary"
+      :entry-content="
+        drawingAnalysis
+          ? 'Drawing analyzed - see insights above'
+          : 'Complete your drawing and analyze it for insights'
+      "
       :entry-type="EntryKind.DRAW"
     />
   </div>
@@ -443,5 +532,15 @@ onUnmounted(() => {
 
 canvas {
   touch-action: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 </style>

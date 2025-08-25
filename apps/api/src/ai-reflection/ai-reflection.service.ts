@@ -160,8 +160,9 @@ Guidelines:
   • Perspective shifting (e.g., "How might you see this experience differently if it happened again?")  
   • Emotional mirroring (e.g., "That seems like it brought you peace—does that feel true?")  
 - Ask 1–2 thoughtful, open-ended questions to invite deeper reflection.  
-- Keep responses short (2–3 sentences max).  
-- End with an encouraging follow-up question *unless* the reflection feels complete, in which case conclude warmly (e.g., affirm their insights and suggest pausing to let it settle).  
+- Keep responses short (2–3 sentences max) and make sure the conversation flows smoothly.  
+- End with an encouraging follow-up question *unless* the reflection feels complete, in which case conclude warmly (e.g., affirm their insights and suggest pausing to let it settle).
+- Ask a maximum of 4 questions before ending the conversation naturally.  
 - Avoid generic advice; focus on curiosity, empathy, and discovery.`,
         },
         ...conversationContext.slice(-4),
@@ -258,9 +259,7 @@ Keep it to 2-3 sentences and make it personal to their specific entry.`;
   private async makeAIRequest(
     messages: Array<{
       role: string;
-      content:
-        | string
-        | { type: string; text?: string; image_url?: { url: string } }[];
+      content: string | { type: string; text?: string }[];
     }>,
   ): Promise<string> {
     try {
@@ -404,18 +403,18 @@ Return ONLY a JSON array of strings like: ["prompt1", "prompt2", "prompt3", "pro
       const contextPrompt = `Generate a simple creative drawing prompt for journal reflection. Nothing too abstract or direct.Make sure it is something that would indicate the user's current state of mind.
     ${dto.mood ? `Current mood: ${dto.mood}` : ''}
     ${dto.theme ? `Theme focus: ${dto.theme}` : ''}
-    
+
     Provide a drawing context that includes:
     1. A clear, inspiring drawing prompt
     2. 3-4 specific suggestions for elements to include
     3. Types of shapes/elements that would be meaningful
     
     Please provide the analysis ONLY as valid JSON (no code fences, no explanations, no extra text). Use this exact structure:
-    {
+{
       "prompt": "drawing prompt text",
       "suggestions": ["suggestion1", "suggestion2", "suggestion3"],
       "elements": [{"type": "shape/element", "description": "meaning/purpose"}]
-    }`;
+}`;
 
       const messages = [
         {
@@ -555,7 +554,7 @@ Return ONLY a JSON array of strings like: ["prompt1", "prompt2", "prompt3", "pro
           )[];
     }[],
   ) {
-    let model = 'gpt-4o-mini';
+    let model = 'gpt-4o-mini-2024-07-18';
     let temperature = 0.7;
     let maxTokens = 800;
     let parseJson = false;
@@ -590,7 +589,6 @@ Return ONLY a JSON array of strings like: ["prompt1", "prompt2", "prompt3", "pro
         body: JSON.stringify({
           model,
           messages,
-          temperature,
           max_tokens: maxTokens,
           stream: false,
         }),
@@ -610,7 +608,7 @@ Return ONLY a JSON array of strings like: ["prompt1", "prompt2", "prompt3", "pro
       const data = await response.json();
       const content = data?.choices?.[0]?.message?.content;
 
-      console.log({ data: data.choices[0].message });
+      console.log('Full API response:', JSON.stringify(data, null, 2));
 
       if (!content) {
         throw new AIAPIException('No content in AI response', 500);
