@@ -150,9 +150,11 @@ Please provide the analysis ONLY as valid JSON (no code fences, no explanations,
           content: `You are an empathetic AI reflection guide. 
 Your role is to help the user explore their journal entry with curiosity, compassion, and variety in language.  
 
-Journal Entry: ${entryContent ? `"${entryContent}"` : 'The user has not provided an entry.'}  
+Journal Entry: ${entryContent ? `"${entryContent}"` : 'The user has not provided an entry.'}
+ 
 
 Guidelines:
+- If the entry content is a drawing analysis, go into the insights and find out which one the user ressonates with if any.
 - Begin by acknowledging what the user shared, but vary how you phrase it (avoid repeating the same sentence stems like “It sounds like…”).  
 - Mix in different styles of reflection:  
   • Observations (e.g., "I noticed you mentioned…")  
@@ -400,27 +402,88 @@ Return ONLY a JSON array of strings like: ["prompt1", "prompt2", "prompt3", "pro
 
   async getDrawingContext(dto: GetDrawingContextDto): Promise<DrawingContext> {
     try {
-      const contextPrompt = `Generate a simple creative drawing prompt for journal reflection. Nothing too abstract or direct.Make sure it is something that would indicate the user's current state of mind.
-    ${dto.mood ? `Current mood: ${dto.mood}` : ''}
-    ${dto.theme ? `Theme focus: ${dto.theme}` : ''}
+      const reflectionApproaches = [
+        'emotional landscape',
+        'daily energy flow',
+        'moment capture',
+        'feeling visualization',
+        "day's rhythm",
+        'internal weather',
+        'personal symbols',
+        'time progression',
+        'relationship dynamics',
+        'challenge representation',
+        'growth visualization',
+        'memory mapping',
+      ];
 
-    Provide a drawing context that includes:
-    1. A clear, inspiring drawing prompt
-    2. 3-4 specific suggestions for elements to include
-    3. Types of shapes/elements that would be meaningful
+      const journalFrameworks = [
+        'Draw how your day felt rather than what happened',
+        'Illustrate the emotional journey of your day',
+        "Create a visual representation of today's energy levels",
+        'Show the highlights and low points as a landscape',
+        'Draw the story of today using symbols and shapes',
+        "Visualize today's experiences as weather patterns",
+        "Illustrate how you moved through today's challenges",
+        "Create a map of today's emotional territories",
+      ];
+
+      const timeVariation = new Date().getHours() % reflectionApproaches.length;
+      const selectedApproach = reflectionApproaches[timeVariation];
+      const selectedFramework =
+        journalFrameworks[Math.floor(Math.random() * journalFrameworks.length)];
+
+      const contextPrompt = `Generate a reflective drawing prompt for today's journal entry focusing on "${selectedApproach}".
+
+    Framework: ${selectedFramework}
     
-    Please provide the analysis ONLY as valid JSON (no code fences, no explanations, no extra text). Use this exact structure:
+    User context:
+    ${dto.mood ? `Current mood/feeling: ${dto.mood}` : 'Mood: Not specified'}
+    ${dto.theme ? `Day's focus/theme: ${dto.theme}` : 'Theme: General daily reflection'}
+    
+    Create a drawing prompt that:
+    - Helps process today's experiences through visual reflection
+    - Is achievable in a journal setting (simple materials)
+    - Encourages emotional processing rather than artistic perfection
+    - Connects to their actual day and feelings
+    - Uses accessible symbols, shapes, and concepts
+    
+    AVOID: Generic nature scenes, perfect illustrations, complex technical drawings, cliché symbols like basic suns/hearts
+    
+    FOCUS ON: Personal emotional processing, daily experience reflection, meaningful symbolism, accessible drawing concepts
+    
+    Return ONLY this JSON structure:
 {
-      "prompt": "drawing prompt text",
-      "suggestions": ["suggestion1", "suggestion2", "suggestion3"],
-      "elements": [{"type": "shape/element", "description": "meaning/purpose"}]
+  "prompt": "specific daily reflection drawing prompt",
+  "suggestions": ["practical suggestion 1", "practical suggestion 2", "practical suggestion 3", "practical suggestion 4"],
+  "elements": [
+    {"type": "element name", "description": "how this helps process today's experience"},
+    {"type": "element name", "description": "connection to daily emotional processing"}
+  ]
 }`;
+
+      const systemPrompt = `You are a journal therapy specialist who creates drawing prompts for daily emotional processing and reflection.
+
+    YOUR GOAL: Help people process their actual day through simple, meaningful drawing exercises.
+    
+    ESSENTIAL REQUIREMENTS:
+    - Focus on TODAY'S experience and feelings, not abstract art
+    - Make prompts simple enough for basic journal materials (pen, pencil, simple colors)
+    - Encourage emotional reflection and processing through drawing
+    - Provide practical, doable suggestions for journal-sized drawings
+    - Help users explore their feelings about their actual day
+    
+    AVOID REPETITION BY:
+    - Varying the emotional focus (energy, relationships, challenges, growth, time, space)
+    - Using different metaphors (weather, landscapes, journeys, containers, flows, structures)
+    - Changing the drawing approach (abstract, symbolic, narrative, spatial, temporal)
+    
+    Return ONLY valid JSON, no additional text.`;
 
       const messages = [
         {
           role: 'system',
-          content:
-            'You are a creative art therapy assistant. Generate inspiring drawing prompts for journal reflection. Return only valid JSON.',
+          content: systemPrompt,
         },
         {
           role: 'user',
@@ -429,10 +492,98 @@ Return ONLY a JSON array of strings like: ["prompt1", "prompt2", "prompt3", "pro
       ];
 
       const response = await this.makeAIRequest(messages);
-      return JSON.parse(response);
+
+      let parsedResponse;
+      try {
+        parsedResponse = JSON.parse(response);
+      } catch (parseError) {
+        this.logger.error('JSON parsing failed, raw response:', response);
+        throw new AIServiceException('Invalid JSON response from AI service');
+      }
+
+      if (
+        !parsedResponse.prompt ||
+        !Array.isArray(parsedResponse.suggestions) ||
+        !Array.isArray(parsedResponse.elements)
+      ) {
+        throw new AIServiceException(
+          'Invalid response structure from AI service',
+        );
+      }
+
+      return parsedResponse;
     } catch (error) {
       this.logger.error('Drawing context generation failed:', error);
-      throw new AIServiceException('Failed to generate drawing context');
+
+      const journalFallbacks = [
+        {
+          prompt:
+            'Draw the rhythm of your day as a line that rises and falls with your energy levels',
+          suggestions: [
+            'Start from morning on the left',
+            'Make the line thicker during intense moments',
+            'Add small symbols for key events',
+            'Use different colors for different types of energy',
+          ],
+          elements: [
+            {
+              type: 'flowing line',
+              description: 'helps visualize the ups and downs of your day',
+            },
+            {
+              type: 'symbolic markers',
+              description:
+                'allows you to mark significant moments for reflection',
+            },
+          ],
+        },
+        {
+          prompt:
+            'Create a weather map of your internal emotional climate throughout today',
+          suggestions: [
+            'Use different weather symbols for different feelings',
+            'Show storm areas for difficult moments',
+            'Add sunshine for positive experiences',
+            'Include wind patterns for changing emotions',
+          ],
+          elements: [
+            {
+              type: 'weather patterns',
+              description: 'helps you recognize and name your emotional states',
+            },
+            {
+              type: 'climate zones',
+              description:
+                'shows how different parts of your day had different emotional tones',
+            },
+          ],
+        },
+        {
+          prompt:
+            'Draw today as a container - what did you carry, collect, or let go of?',
+          suggestions: [
+            'Draw a bag, box, or vessel shape',
+            'Fill it with symbols of experiences',
+            "Show things falling out that you're releasing",
+            'Add weight lines for heavy emotional loads',
+          ],
+          elements: [
+            {
+              type: 'container shape',
+              description: 'represents your emotional capacity and boundaries',
+            },
+            {
+              type: 'contents symbols',
+              description:
+                "helps identify what experiences you're carrying forward",
+            },
+          ],
+        },
+      ];
+
+      const randomFallback =
+        journalFallbacks[Math.floor(Math.random() * journalFallbacks.length)];
+      return randomFallback;
     }
   }
 
@@ -446,7 +597,7 @@ Return ONLY a JSON array of strings like: ["prompt1", "prompt2", "prompt3", "pro
 
       const analysisPrompt = `Analyze this drawing image in relation to the context provided. Provide a critical analysis .
     
-    Drawing Context: "${drawingContext}"
+    Drawing context: "${drawingContext}"
     
     Please analyze:
     1. Shapes and forms present

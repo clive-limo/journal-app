@@ -7,12 +7,17 @@ import { cardDetails } from '@/utils/data';
 import { MoveRight, UserRound } from 'lucide-vue-next';
 import { useAuthStore } from '@/stores/auth';
 import { storeToRefs } from 'pinia';
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 
 const auth = useAuthStore();
 const { user, defaultJournal, isLoading } = storeToRefs(auth);
 
+const loading = ref(false);
 const handleLogin = async () => {
+  loading.value = true;
+  setTimeout(() => {
+    loading.value = false;
+  }, 3000);
   await auth.loginWithGoogle();
 };
 
@@ -48,7 +53,7 @@ const goToHome = () => {
         src="@/assets/images/echo_journal_logo.png"
         class="h-[89px] w-[171px]"
       />
-      <UiButton :has-icon="true" icon-location="after" @click="() => {}">
+      <UiButton :has-icon="true" icon-location="after" @click="handleLogin">
         <template #icon>
           <UserRound />
         </template>
@@ -80,12 +85,7 @@ const goToHome = () => {
         </Text>
 
         <div class="w-full flex flex-row items-center justify-center">
-          <UiButton
-            :has-icon="true"
-            icon-location="after"
-            @click="handleLogin"
-            :delay="2000"
-          >
+          <UiButton :has-icon="true" icon-location="after" @click="handleLogin">
             <template #icon>
               <MoveRight />
             </template>

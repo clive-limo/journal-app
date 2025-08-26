@@ -48,7 +48,6 @@ const loading = ref(false);
 
 const handleClick = async () => {
   loading.value = true;
-  console.log('clicked');
   try {
     await props.onClick();
   } finally {
