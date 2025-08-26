@@ -74,7 +74,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  function loginWithGoogle() {
+  async function loginWithGoogle() {
     const url = `${API_BASE}/auth/google`;
     const state = btoa(
       JSON.stringify({ t: Date.now(), returnTo: returnTo.value }),
