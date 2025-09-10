@@ -67,10 +67,11 @@ const contextAlignmentBg = computed(() => {
     <div v-if="isLoading" class="p-6 space-y-4">
       <div class="flex items-center justify-center py-8">
         <div class="relative">
-          <Sparkles class="w-8 h-8 text-[#F1ACB4] animate-pulse" />
           <div
-            class="absolute inset-0 w-14 h-14 border-2 border-[#F1ACB4] rounded-full animate-spin border-t-purple-500"
-          ></div>
+            class="w-14 h-14 flex flex-row items-center justify-center border-2 border-[#F1ACB4] rounded-full animate-spin border-t-purple-500"
+          >
+            <Sparkles class="w-8 h-8 text-[#F1ACB4] animate-pulse" />
+          </div>
         </div>
       </div>
       <Text variant="body" size="sm" class="text-center text-gray-600">

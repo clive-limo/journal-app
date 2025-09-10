@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import UiButton from '@/components/Ui/UiButton.vue';
 import Text from '@/components/Typography/Text.vue';
 import {
@@ -211,6 +211,31 @@ const drawingContext = ref<{
   suggestions: string[];
 } | null>(null);
 const drawingAnalysis = ref<ImageAnalysisResult | null>(null);
+const drawingSummary = computed(() => {
+  if (!drawingAnalysis.value) return null;
+
+  const shapes = drawingAnalysis.value.shapes
+    .map(
+      ({ type, count, description }) => `${type} (${count}) - ${description}`,
+    )
+    .join(', ');
+
+  const colors = drawingAnalysis.value.colors
+    .map(
+      ({ name, dominance, emotion }) =>
+        `${name} (${Math.round(dominance)}%) - ${emotion}`,
+    )
+    .join(', ');
+
+  const patterns = drawingAnalysis.value.patterns.join(', ');
+
+  const contextAlignment = `Score: ${drawingAnalysis.value.contextAlignment.score} - ${drawingAnalysis.value.contextAlignment.observations.join(', ')}`;
+
+  const insights = drawingAnalysis.value.insights.join(', ');
+
+  return `${shapes}\n${colors}\n${patterns}\n${contextAlignment}\n${insights}`;
+});
+
 const loadingContext = ref(false);
 const contextError = ref<string | null>(null);
 const analyzingDrawing = ref(false);
@@ -510,7 +535,7 @@ onUnmounted(() => {
     <ReflectionPanel
       :entry-content="
         drawingAnalysis
-          ? 'Drawing analyzed - see insights above'
+          ? `${drawingSummary}`
           : 'Complete your drawing and analyze it for insights'
       "
       :entry-type="EntryKind.DRAW"

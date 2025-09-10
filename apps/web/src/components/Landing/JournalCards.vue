@@ -1,6 +1,6 @@
 <template>
   <div
-    class="shadow-md h-[250px] w-[250px] rounded-[50px] overflow-hidden"
+    class="shadow-md h-[300px] w-[300px] rounded-[50px] overflow-hidden"
     :style="{ backgroundColor: color }"
   >
     <div class="p-4 text-left">
