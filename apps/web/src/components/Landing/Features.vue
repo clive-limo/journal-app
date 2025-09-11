@@ -4,97 +4,19 @@ import UiButton from '@/components/Ui/UiButton.vue';
 import FooterSection from '@/components/Landing/FooterSection.vue';
 import router from '@/router';
 import { useAuthStore } from '@/stores/auth';
-import {
-  MoveRight,
-  UserRound,
-  MessageCircle,
-  Mic,
-  Brain,
-  TrendingUp,
-  Shield,
-  Smartphone,
-  Calendar,
-  BarChart3,
-  Heart,
-  Target,
-} from 'lucide-vue-next';
+
+import { additionalFeatures, mainFeatures } from '@/utils/data';
 
 const auth = useAuthStore();
 
 const handleLogin = async () => {
   await auth.loginWithGoogle();
 };
-
-const mainFeatures = [
-  {
-    icon: MessageCircle,
-    title: 'Multiple Input Methods',
-    description:
-      'Write, type, or record voice notes. Express yourself however feels most natural.',
-    color: 'text-blue-500',
-    bgColor: 'bg-blue-50',
-  },
-  {
-    icon: Brain,
-    title: 'AI-Powered Insights',
-    description:
-      'Our advanced AI analyzes your entries to identify patterns, emotions, and growth opportunities.',
-    color: 'text-purple-500',
-    bgColor: 'bg-purple-50',
-  },
-  {
-    icon: TrendingUp,
-    title: 'Progress Tracking',
-    description:
-      'Visualize your emotional journey with beautiful charts and meaningful progress indicators.',
-    color: 'text-green-500',
-    bgColor: 'bg-green-50',
-  },
-];
-
-const additionalFeatures = [
-  {
-    icon: Shield,
-    title: 'Privacy First',
-    description:
-      'Your thoughts are encrypted and secure. We never share your personal data.',
-  },
-  {
-    icon: Smartphone,
-    title: 'Cross-Platform',
-    description:
-      'Access your journal from any device, anywhere, with seamless synchronization.',
-  },
-  {
-    icon: Calendar,
-    title: 'Smart Reminders',
-    description:
-      'Gentle, personalized reminders to help you maintain your journaling habit.',
-  },
-  {
-    icon: BarChart3,
-    title: 'Mood Analytics',
-    description:
-      'Understand your emotional patterns with detailed mood tracking and analysis.',
-  },
-  {
-    icon: Heart,
-    title: 'Wellness Focus',
-    description:
-      'Built with mental health best practices to support your wellbeing journey.',
-  },
-  {
-    icon: Target,
-    title: 'Goal Setting',
-    description:
-      'Set and track personal growth goals with AI-powered guidance and motivation.',
-  },
-];
 </script>
 
 <template>
   <!-- body -->
-  <div class="flex-1 py-12 px-4 sm:px-6 lg:px-8">
+  <div id="features" class="flex-1 py-12 px-4 sm:px-6 lg:px-8">
     <div class="flex flex-col items-center justify-center gap-4 mx-auto">
       <!-- header section -->
       <div class="text-center flex flex-col items-center justify-center mb-16">

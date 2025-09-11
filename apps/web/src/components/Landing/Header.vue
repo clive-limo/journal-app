@@ -104,7 +104,7 @@
         <!-- Navigation Links -->
         <div class="hidden lg:flex flex-row gap-2 xl:gap-4 xl:pr-16 lg:pr-8">
           <button
-            @click="router.push({ name: 'Features' })"
+            @click="scrollToSection('how-it-works')"
             class="text-playfair px-2 py-1 rounded hover:bg-gray-100/10 transition-colors"
           >
             <Text variant="subtitle" size="button" class="text-orange-500"
@@ -112,13 +112,13 @@
             >
           </button>
           <button
-            @click="router.push({ name: 'Features' })"
+            @click="scrollToSection('features')"
             class="px-2 py-1 rounded hover:bg-gray-100/10 transition-colors"
           >
             <Text variant="subtitle" size="button">Features</Text>
           </button>
           <button
-            @click="router.push({ name: 'Pricing' })"
+            @click="scrollToSection('pricing')"
             class="px-2 py-1 rounded hover:bg-gray-100/10 transition-colors"
           >
             <Text variant="subtitle" size="button">Pricing</Text>
@@ -128,7 +128,7 @@
         <!-- Tablet Navigation (condensed) -->
         <div class="flex lg:hidden md:flex flex-row gap-1 pr-4">
           <button
-            @click="router.push({ name: 'Features' })"
+            @click="scrollToSection('how-it-works')"
             class="text-playfair px-1.5 py-1 rounded hover:bg-gray-100/10 transition-colors text-sm"
           >
             <Text variant="subtitle" size="sm" class="text-orange-500"
@@ -136,13 +136,13 @@
             >
           </button>
           <button
-            @click="router.push({ name: 'Features' })"
+            @click="scrollToSection('features')"
             class="px-1.5 py-1 rounded hover:bg-gray-100/10 transition-colors text-sm"
           >
             <Text variant="subtitle" size="sm">Features</Text>
           </button>
           <button
-            @click="router.push({ name: 'Pricing' })"
+            @click="scrollToSection('pricing')"
             class="px-1.5 py-1 rounded hover:bg-gray-100/10 transition-colors text-sm"
           >
             <Text variant="subtitle" size="sm">Pricing</Text>
@@ -186,5 +186,18 @@ const props = defineProps<{
 
 const toggleMobileMenu = () => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value;
+};
+
+const scrollToSection = (section: string) => {
+  const element = document.getElementById(section);
+  if (element) {
+    // Temporarily set scroll margin
+    element.style.scrollMarginTop = '80px';
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Clean up after scroll completes
+    setTimeout(() => {
+      element.style.scrollMarginTop = '';
+    }, 1000);
+  }
 };
 </script>

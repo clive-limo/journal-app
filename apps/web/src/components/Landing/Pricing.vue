@@ -19,6 +19,7 @@ import {
   Calendar,
 } from 'lucide-vue-next';
 import { ref } from 'vue';
+import { features, plans } from '@/utils/data';
 
 const auth = useAuthStore();
 const isYearly = ref(false);
@@ -30,86 +31,14 @@ const handleLogin = async () => {
 const togglePricing = () => {
   isYearly.value = !isYearly.value;
 };
-
-const plans = [
-  {
-    id: 'starter',
-    name: 'Starter',
-    description: 'Perfect for getting started with journaling',
-    icon: MoonStar,
-    monthlyPrice: 0,
-    yearlyPrice: 0,
-    color: 'text-blue-500',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200',
-    buttonColor: 'bg-blue-500 hover:bg-blue-600',
-    features: [
-      '30 journal entries per month',
-      'Basic AI insights',
-      'Mobile app access',
-      'Entry templates',
-      'Basic mood tracking',
-    ],
-    popular: false,
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    description: 'For serious journalers seeking deeper insights',
-    icon: Zap,
-    monthlyPrice: 9,
-    yearlyPrice: 79, // Save ~26%
-    color: 'text-orange-500',
-    bgColor: 'bg-orange-50',
-    borderColor: 'border-orange-200',
-    buttonColor: 'bg-orange-500 hover:bg-orange-600',
-    features: [
-      'Unlimited journal entries',
-      'Advanced AI analysis',
-      'Detailed progress tracking',
-      'Custom goal setting',
-      'Voice-to-text journaling',
-      'Export capabilities',
-      'Priority support',
-    ],
-    popular: true,
-  },
-  {
-    id: 'premium',
-    name: 'Premium',
-    description: 'Ultimate journaling experience with coaching',
-    icon: Crown,
-    monthlyPrice: 19,
-    yearlyPrice: 179, // Save ~22%
-    color: 'text-purple-500',
-    bgColor: 'bg-purple-50',
-    borderColor: 'border-purple-200',
-    buttonColor: 'bg-purple-500 hover:bg-purple-600',
-    features: [
-      'Everything in Pro',
-      'AI coaching suggestions',
-      'Advanced analytics dashboard',
-      'Habit tracking integration',
-      'Weekly insights reports',
-      'Custom reflection prompts',
-      '1-on-1 onboarding call',
-    ],
-    popular: false,
-  },
-];
-
-const features = [
-  { icon: Brain, text: 'AI-powered emotional insights' },
-  { icon: TrendingUp, text: 'Progress visualization' },
-  { icon: Shield, text: 'Bank-level security' },
-  { icon: Smartphone, text: 'Cross-platform sync' },
-  { icon: Calendar, text: 'Smart reminders' },
-];
 </script>
 
 <template>
   <!-- body -->
-  <div class="flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8">
+  <div
+    id="pricing"
+    class="flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8"
+  >
     <div class="                 ">
       <!-- header section -->
       <div class="text-center flex flex-col items-center pb-16">

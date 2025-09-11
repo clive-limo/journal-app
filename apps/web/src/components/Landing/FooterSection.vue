@@ -10,7 +10,9 @@ import {
   Shield,
   BookOpen,
   MessageCircle,
+  MoveRight,
 } from 'lucide-vue-next';
+import UiButton from '../Ui/UiButton.vue';
 
 const currentYear = new Date().getFullYear();
 
@@ -243,20 +245,29 @@ const handleLinkClick = (link: any) => {
         </div>
 
         <div
-          class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 w-full lg:w-auto"
+          class="flex flex-col sm:flex-row gap-y-3 sm:gap-y-0 sm:gap-x-3 w-full lg:w-auto"
         >
           <div class="relative">
             <input
               type="email"
               placeholder="Enter your email"
-              class="w-full sm:w-80 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              class="w-full sm:w-80 px-4 py-3 border-3 border-black/10 placeholder:font-firacode placeholder:text-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
           </div>
-          <button
-            class="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200 whitespace-nowrap"
+
+          <UiButton
+            :has-icon="true"
+            icon-location="after"
+            @click="
+              () => {
+                console.log('clicked');
+              }
+            "
+            :is-primary="true"
+            class="mb-4 mx-auto"
           >
-            <Text variant="subtitle" size="sm">Subscribe</Text>
-          </button>
+            <Text variant="subtitle" size="button">Subscribe</Text>
+          </UiButton>
         </div>
       </div>
     </div>

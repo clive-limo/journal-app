@@ -24,6 +24,7 @@ const handleLogin = async () => {
 <template>
   <!-- body -->
   <div
+    id="how-it-works"
     class="h-full flex-1 flex flex-col items-center justify-center py-4 px-4 sm:py-6 sm:px-6 lg:px-8"
   >
     <div class="max-w-6xl flex flex-col gap-4 mx-auto">
