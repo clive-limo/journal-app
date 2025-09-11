@@ -7,7 +7,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
-type VariantType = 'title' | 'subtitle' | 'body';
+type VariantType = 'title' | 'subtitle' | 'body' | 'fira-bold';
 type SizeType = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'button';
 
 interface Props {
@@ -47,6 +47,14 @@ const variantSizes: Record<VariantType, Record<SizeType, string>> = {
     '2xl': 'font-playfair sm:text-5xl md:text-[72px] font-bold leading-tight',
     button: 'font-firacode text-xl font-medium text-gray-600 leading-relaxed',
   },
+  'fira-bold': {
+    sm: 'font-firacode text-sm font-bold  leading-normal',
+    md: 'font-firacode text-base font-bold  leading-normal',
+    lg: 'font-firacode text-lg font-bold  leading-relaxed',
+    xl: 'font-firacode text-xl font-bold  leading-relaxed',
+    '2xl': 'font-firacode sm:text-5xl md:text-[72px] font-bold leading-tight',
+    button: 'font-firacode text-xl font-bold leading-relaxed',
+  },
 };
 
 // Default tags for each variant
@@ -54,6 +62,7 @@ const defaultTags: Record<VariantType, string> = {
   title: 'h2',
   subtitle: 'p',
   body: 'p',
+  'fira-bold': 'p',
 };
 
 const computedClasses = computed((): string => {
