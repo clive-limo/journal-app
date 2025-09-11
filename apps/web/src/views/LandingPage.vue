@@ -39,7 +39,7 @@ const goToHome = () => {
 
 <template>
   <div
-    class="h-screen grid grid-cols-1 pt-[100px] w-full bg-white overflow-auto"
+    class="h-screen grid grid-cols-1 pt-[100px] w-full bg-[#fffff0] overflow-auto"
   >
     <!-- header -->
     <Header :handleLogin="handleLogin" />

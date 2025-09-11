@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full w-full overflow-x-hidden bg-black">
+  <div class="h-full w-full overflow-x-hidden">
     <div
       class="absolute -top-10 md:-top-20 ld:-top-40 left-1/2 transform -translate-x-1/2 pointer-events-none"
     >
