@@ -25,19 +25,19 @@ export const cardDetails = [
     color: `#F1ACB4`,
   },
   {
-    title: 'Cooking Dinner with Friends',
+    title: 'Cooking Dinner With Friends',
     dayCount: 12,
     imageSrc: quieteReflection,
     color: `#F7BF46`,
   },
   {
-    title: 'Quite Reflections before Sleep',
+    title: 'Quiete Reflections Before Sleep',
     dayCount: 24,
     imageSrc: cookingDinner,
     color: `#432818`,
   },
   {
-    title: 'Hiking through the new tails',
+    title: 'Hiking Through the New Trails',
     dayCount: 32,
     imageSrc: hikingTrails,
     color: `#514F4D`,
