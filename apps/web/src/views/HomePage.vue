@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import JournalEntry from '@/components/Home/JournalEntry.vue';
+import ProfileMenu from '@/components/Home/ProfileMenu.vue';
 import Text from '@/components/Typography/Text.vue';
 import UiButton from '@/components/Ui/UiButton.vue';
+import router from '@/router';
 import { useAuthStore } from '@/stores/auth';
 import {
   ArrowLeft,
@@ -14,7 +16,14 @@ import {
   UserRound,
 } from 'lucide-vue-next';
 
-import { ref, nextTick, Transition, computed } from 'vue';
+import {
+  ref,
+  nextTick,
+  Transition,
+  computed,
+  onMounted,
+  onBeforeMount,
+} from 'vue';
 
 const authStore = useAuthStore();
 
@@ -24,6 +33,7 @@ const journalType = ref('write');
 const buttonsVisible = ref([false, false, false]);
 
 const showSidebar = ref(false);
+const showProfileMenu = ref(false);
 
 const today = computed(() => {
   const date = new Date();
@@ -52,10 +62,28 @@ const getButtonAnimation = (index: number) => {
 
   return `${baseClasses} ${buttonsVisible.value[index] ? visibleClasses : hiddenClasses}`;
 };
+
+const greeting = ref('Good Morning');
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good Morning';
+  if (hour < 18) return 'Good Afternoon';
+  return 'Good Evening';
+};
+
+onMounted(() => {
+  greeting.value = getGreeting();
+});
+
+onBeforeMount(() => {
+  if (!authStore.user) {
+    router.push('/');
+  }
+});
 </script>
 
 <template>
-  <main class="flex flex-row p-4 gap-2">
+  <main class="relative flex flex-row p-4 gap-2">
     <!-- sidebar -->
     <Transition
       enter-active-class="transition-all duration-300 ease-out"
@@ -65,7 +93,7 @@ const getButtonAnimation = (index: number) => {
     >
       <section
         v-if="showSidebar"
-        class="w-[300px] mr-5 flex flex-col p-8 rounded-[50px] border-4 border-black/10 bg-orange-200/20 backdrop-blur-md"
+        class="absolute w-[300px] top-[80px] mr-5 flex flex-col p-8 rounded-[50px] border-4 border-black/10 bg-orange-200/20 backdrop-blur-md z-30"
       >
         <Text variant="title" size="lg">Recent Entries</Text>
 
@@ -110,11 +138,25 @@ const getButtonAnimation = (index: number) => {
             </template>
           </UiButton>
 
-          <UiButton :has-icon="true" icon-location="after" @click="() => {}">
-            <template #icon>
-              <UserRound />
-            </template>
-          </UiButton>
+          <div class="relative flex flex-col">
+            <UiButton
+              :has-icon="true"
+              icon-location="after"
+              @click="() => (showProfileMenu = !showProfileMenu)"
+            >
+              <template #icon>
+                <UserRound />
+              </template>
+            </UiButton>
+            <Transition
+              enter-active-class="transition-all duration-300 ease-out"
+              leave-active-class="transition-all duration-800 ease-in-out cubic-bezier(1, 0.5, 0.8, 1)"
+              enter-from-class="transform translate-x-full opacity-0"
+              leave-to-class="transform translate-x-full opacity-0"
+            >
+              <ProfileMenu v-if="showProfileMenu" />
+            </Transition>
+          </div>
         </div>
 
         <!-- journaling header -->
@@ -145,8 +187,12 @@ const getButtonAnimation = (index: number) => {
           class="flex-1 flex flex-col items-center justify-center gap-4 pb-32"
         >
           <Text variant="subtitle" size="md">{{ today.toUpperCase() }}</Text>
-          <Text variant="title" size="xl" class="text-[56px] font-black">
-            Good Morning,
+          <Text
+            variant="title"
+            size="xl"
+            class="text-[56px] font-black text-center"
+          >
+            {{ greeting }},
             {{
               authStore.user
                 ? authStore.user.firstName!.charAt(0).toUpperCase() +

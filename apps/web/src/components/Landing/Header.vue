@@ -36,7 +36,7 @@
         class="md:text-sm lg:text-base"
       >
         <template #icon>
-          <Hamburger class="w-4 h-4 lg:w-5 lg:h-5" />
+          <Hamburger />
         </template>
       </UiButton>
     </div>
