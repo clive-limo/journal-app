@@ -325,6 +325,15 @@ export const useAIReflectionStore = defineStore('aiReflection', () => {
     }
   };
 
+  // Save reflection chats
+  const saveReflection = () => {
+    if (chatMessages.value.length <= 1) {
+      console.log('No reflection to save');
+      return;
+    }
+    //save reflection details
+  };
+
   // Helper Methods
   const generateId = () => Math.random().toString(36).substr(2, 9);
 

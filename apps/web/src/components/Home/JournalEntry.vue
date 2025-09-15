@@ -127,7 +127,7 @@ const handleSaveEntry = async () => {
           <template #icon>
             <Trash2 />
           </template>
-          <p>Discard</p>
+          <Text variant="subtitle" size="button">Discard</Text>
         </UiButton>
         <UiButton
           :has-icon="true"
@@ -138,7 +138,7 @@ const handleSaveEntry = async () => {
           <template #icon>
             <Save />
           </template>
-          <p>Save Your Entry</p>
+          <Text variant="subtitle" size="button">Save Your Entry</Text>
         </UiButton>
       </div>
     </div>

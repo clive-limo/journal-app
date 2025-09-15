@@ -8,6 +8,8 @@ import { MoodpointsModule } from './moodpoints/moodpoints.module';
 import { MediaModule } from './media/media.module';
 import { AIReflectionModule } from './ai-reflection/ai-reflection.module';
 import { MulterModule } from '@nestjs/platform-express';
+import { ReflectionMessagesModule } from './reflection-messages/reflection-messages.module';
+import { AiAnalysisModule } from './analysis/analysis.module';
 
 @Module({
   imports: [
@@ -23,7 +25,7 @@ import { MulterModule } from '@nestjs/platform-express';
     ]),
     MulterModule.register({
       limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB limit
+        fileSize: 10 * 1024 * 1024,
       },
     }),
     AuthModule,
@@ -31,6 +33,8 @@ import { MulterModule } from '@nestjs/platform-express';
     MoodpointsModule,
     MediaModule,
     AIReflectionModule,
+    ReflectionMessagesModule,
+    AiAnalysisModule,
   ],
   controllers: [],
   providers: [
